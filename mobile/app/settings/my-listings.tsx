@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, ScrollView, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -16,6 +16,7 @@ import {
   type MyListing,
 } from '@/lib/mocks/my-listings';
 import { useSellStore } from '@/lib/stores/sell';
+import { useMyListings } from '@/lib/hooks/useMyListings';
 
 type Tab = 'active' | 'moderation' | 'draft' | 'sold' | 'rejected';
 
@@ -32,6 +33,7 @@ export default function MyListings() {
   const scheme = useThemeScheme();
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('active');
+  const { data: listings = MY_LISTINGS, isFetching, refetch } = useMyListings();
 
   const counts = useMemo(() => {
     const c: Record<ListingStatus, number> = {
@@ -41,14 +43,18 @@ export default function MyListings() {
       rejected: 0,
       sold: 0,
     };
-    for (const l of MY_LISTINGS) c[l.status]++;
+    for (const l of listings) c[l.status]++;
     return c;
-  }, []);
+  }, [listings]);
 
   const list = useMemo(
-    () => MY_LISTINGS.filter((l) => l.status === TAB_STATUS[tab]),
-    [tab],
+    () => listings.filter((l) => l.status === TAB_STATUS[tab]),
+    [listings, tab],
   );
+
+  const totalViews = listings.reduce((s, l) => s + l.views, 0);
+  const totalLeads = listings.reduce((s, l) => s + l.leads, 0);
+  const totalFavorites = listings.reduce((s, l) => s + l.favorites, 0);
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.color.bg }}>
@@ -69,17 +75,17 @@ export default function MyListings() {
           <StatCard
             icon="eye"
             label="Vues"
-            value={MY_LISTINGS.reduce((s, l) => s + l.views, 0).toLocaleString('fr-FR')}
+            value={totalViews.toLocaleString('fr-FR')}
           />
           <StatCard
             icon="chatbubbles"
             label="Leads"
-            value={MY_LISTINGS.reduce((s, l) => s + l.leads, 0).toString()}
+            value={totalLeads.toString()}
           />
           <StatCard
             icon="heart"
             label="Favoris"
-            value={MY_LISTINGS.reduce((s, l) => s + l.favorites, 0).toString()}
+            value={totalFavorites.toString()}
           />
         </View>
 
@@ -112,6 +118,13 @@ export default function MyListings() {
         data={list}
         keyExtractor={(l) => l.id}
         contentContainerStyle={{ padding: 16, gap: 12 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isFetching}
+            onRefresh={refetch}
+            tintColor={theme.color.primary}
+          />
+        }
         renderItem={({ item }) => <ListingRow listing={item} />}
         ListEmptyComponent={
           <View style={{ alignItems: 'center', gap: 10, padding: 40 }}>

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +8,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { formatKm, formatMRU, formatRelativeDate } from '@/lib/format';
 import { getVehicleById, isFreshlyImported } from '@/lib/mocks/vehicles';
 import { useVehicle } from '@/lib/hooks/useListings';
+import { listingsApi } from '@/lib/api';
 
 function formatHands(n: number): string {
   if (n === 0) return '0 main';
@@ -34,6 +36,12 @@ export default function VehicleDetail() {
   const router = useRouter();
   const { data: vehicleApi } = useVehicle(id);
   const vehicle = vehicleApi ?? getVehicleById(id ?? '');
+
+  // Track une vue quand l'écran s'ouvre avec un id. Best-effort (silent si offline).
+  useEffect(() => {
+    if (!id) return;
+    listingsApi.trackView(id).catch(() => {});
+  }, [id]);
 
   if (!vehicle) {
     return (
@@ -191,12 +199,18 @@ export default function VehicleDetail() {
             variant="secondary"
             style={{ flex: 1 }}
             leading={<Ionicons name="logo-whatsapp" size={16} color={theme.color.text} />}
+            onPress={() => {
+              listingsApi.trackContact(vehicle.id).catch(() => {});
+            }}
           />
           <Button
             label="Contacter"
             style={{ flex: 1.3 }}
             leading={<Ionicons name="chatbubble" size={16} color={theme.color.textInverse} />}
-            onPress={() => router.push(`/chat/${vehicle.id}` as never)}
+            onPress={() => {
+              listingsApi.trackContact(vehicle.id).catch(() => {});
+              router.push(`/chat/${vehicle.id}` as never);
+            }}
           />
         </View>
       </StickyCTA>

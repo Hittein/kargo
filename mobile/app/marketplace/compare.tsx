@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Image, Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Badge, Button, Card, Screen, Text } from '@/components/ui';
 import { BackHeader } from '@/components/BackHeader';
 import { useTheme } from '@/theme/ThemeProvider';
 import { VEHICLES, type Vehicle } from '@/lib/mocks/vehicles';
 import { formatKm, formatMRU } from '@/lib/format';
+import { useVehicles } from '@/lib/hooks/useListings';
+import { useCompareStore } from '@/lib/stores/compare';
 
 const VERDICT_LABEL: Record<string, { label: string; tone: 'success' | 'gold' | 'danger' | 'primary' }> = {
   deal: { label: 'Bonne affaire', tone: 'success' },
@@ -17,17 +19,32 @@ const VERDICT_LABEL: Record<string, { label: string; tone: 'success' | 'gold' | 
 
 export default function CompareScreen() {
   const theme = useTheme();
+  const router = useRouter();
   const { ids: idsParam } = useLocalSearchParams<{ ids?: string }>();
-  const initialIds = useMemo(() => (idsParam ? idsParam.split(',') : VEHICLES.slice(0, 2).map((v) => v.id)), [idsParam]);
-  const [ids, setIds] = useState<string[]>(initialIds);
+  const storeIds = useCompareStore((s) => s.ids);
+  const removeFromStore = useCompareStore((s) => s.remove);
+  const maxCompare = useCompareStore((s) => s.max);
+  const { data: allVehicles = VEHICLES } = useVehicles();
 
-  const vehicles = useMemo(() => ids.map((id) => VEHICLES.find((v) => v.id === id)).filter(Boolean) as Vehicle[], [ids]);
+  // Sync URL → store si on arrive via deep link avec ?ids=
+  useEffect(() => {
+    if (!idsParam) return;
+    const fromUrl = idsParam.split(',').filter(Boolean);
+    const current = useCompareStore.getState().ids;
+    if (fromUrl.length && current.length === 0) {
+      useCompareStore.setState({ ids: fromUrl.slice(0, maxCompare) });
+    }
+  }, [idsParam, maxCompare]);
 
-  const removeAt = (id: string) => setIds(ids.filter((x) => x !== id));
-  const addCandidate = () => {
-    const next = VEHICLES.find((v) => !ids.includes(v.id));
-    if (next && ids.length < 4) setIds([...ids, next.id]);
-  };
+  const ids = storeIds.length > 0 ? storeIds : idsParam ? idsParam.split(',') : [];
+
+  const vehicles = useMemo(
+    () => ids.map((id) => allVehicles.find((v) => v.id === id)).filter(Boolean) as Vehicle[],
+    [ids, allVehicles],
+  );
+
+  const removeAt = (id: string) => removeFromStore(id);
+  const canAddMore = ids.length < maxCompare;
 
   const winners = useMemo(() => {
     if (vehicles.length === 0) return {};
@@ -36,6 +53,27 @@ export default function CompareScreen() {
     const newest = vehicles.reduce((a, b) => (a.year > b.year ? a : b)).id;
     return { lowestPrice, lowestKm, newest };
   }, [vehicles]);
+
+  if (vehicles.length === 0) {
+    return (
+      <Screen scroll>
+        <BackHeader title="Comparer" code="A-05" />
+        <View style={{ alignItems: 'center', gap: 12, padding: 32 }}>
+          <Ionicons name="git-compare" size={48} color={theme.color.textSecondary} />
+          <Text variant="heading2" weight="bold" align="center">
+            Aucune voiture à comparer
+          </Text>
+          <Text variant="bodyM" tone="secondary" align="center">
+            Depuis la recherche, tapez l'icône ⇄ sur chaque annonce pour en ajouter au comparateur (2 à 3).
+          </Text>
+          <Button
+            label="Retour à la recherche"
+            onPress={() => router.push('/marketplace/search')}
+          />
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen scroll>
@@ -54,9 +92,9 @@ export default function CompareScreen() {
             onRemove={() => removeAt(v.id)}
           />
         ))}
-        {vehicles.length < 4 ? (
+        {canAddMore ? (
           <Pressable
-            onPress={addCandidate}
+            onPress={() => router.push('/marketplace/search')}
             style={{
               width: 200,
               height: 320,
@@ -67,11 +105,17 @@ export default function CompareScreen() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: 6,
+              padding: 12,
             }}
           >
             <Ionicons name="add-circle" size={36} color={theme.color.textSecondary} />
-            <Text variant="bodyM" tone="secondary">
-              Ajouter
+            <Text variant="bodyM" tone="secondary" align="center">
+              Choisir dans la liste
+            </Text>
+            <Text variant="caption" tone="secondary" align="center">
+              {maxCompare - ids.length} emplacement
+              {maxCompare - ids.length > 1 ? 's' : ''} restant
+              {maxCompare - ids.length > 1 ? 's' : ''}
             </Text>
           </Pressable>
         ) : null}

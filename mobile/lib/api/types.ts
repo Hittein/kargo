@@ -43,6 +43,9 @@ export type ApiListing = {
   photoUrls: string[];
   status: string;
   publishedAt: string;
+  viewCount?: number;
+  contactCount?: number;
+  favoriteCount?: number;
 };
 
 export type ApiTrip = {

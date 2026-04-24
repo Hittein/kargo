@@ -1,6 +1,7 @@
 package com.kargo.api.repository;
 
 import com.kargo.api.model.Listing;
+import com.kargo.api.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,4 +16,6 @@ public interface ListingRepository extends JpaRepository<Listing, UUID> {
 
     @Query("select l from Listing l where l.status = 'active' and l.publishedAt > :since order by l.publishedAt desc")
     List<Listing> findActivePublishedAfter(@Param("since") Instant since);
+
+    List<Listing> findBySellerOrderByPublishedAtDesc(User seller);
 }

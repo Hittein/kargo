@@ -74,6 +74,18 @@ public class Listing {
 
     @Column(nullable = false)
     @Builder.Default
+    private int viewCount = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private int contactCount = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private int favoriteCount = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
     private String status = "active";
 
     @Column(nullable = false)

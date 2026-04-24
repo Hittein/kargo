@@ -39,7 +39,8 @@ public class Dtos {
             String id, String brand, String model, int year, Integer importYear, int ownersInCountry,
             long priceMru, int km, String fuel, String transmission, String city, String district,
             String sellerName, String sellerType, boolean verified, boolean vinVerified,
-            boolean kargoVerified, int photos, List<String> photoUrls, String status, Instant publishedAt
+            boolean kargoVerified, int photos, List<String> photoUrls, String status, Instant publishedAt,
+            int viewCount, int contactCount, int favoriteCount
     ) {
         public static ListingDto of(Listing l, List<String> urls) {
             return new ListingDto(
@@ -47,7 +48,8 @@ public class Dtos {
                     l.getOwnersInCountry(), l.getPriceMru(), l.getKm(), l.getFuel(), l.getTransmission(),
                     l.getCity(), l.getDistrict(), l.getSellerName(), l.getSellerType(),
                     l.isVerified(), l.isVinVerified(), l.isKargoVerified(),
-                    l.getPhotos(), urls, l.getStatus(), l.getPublishedAt()
+                    l.getPhotos(), urls, l.getStatus(), l.getPublishedAt(),
+                    l.getViewCount(), l.getContactCount(), l.getFavoriteCount()
             );
         }
     }

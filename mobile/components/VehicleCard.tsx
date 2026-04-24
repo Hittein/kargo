@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Badge, Card, Text } from '@/components/ui';
@@ -7,6 +7,7 @@ import { VehiclePhotoCarousel } from '@/components/VehiclePhotoCarousel';
 import { useTheme } from '@/theme/ThemeProvider';
 import { formatKm, formatMRU, formatRelativeDate } from '@/lib/format';
 import { isFreshlyImported, type Vehicle } from '@/lib/mocks/vehicles';
+import { useCompareStore } from '@/lib/stores/compare';
 
 function formatHands(n: number): string {
   if (n === 0) return '0 main';
@@ -24,7 +25,19 @@ export function VehicleCard({ vehicle, layout = 'full', onPress }: VehicleCardPr
   const theme = useTheme();
   const router = useRouter();
   const [favorite, setFavorite] = useState(false);
+  const inCompare = useCompareStore((s) => s.ids.includes(vehicle.id));
+  const toggleCompare = useCompareStore((s) => s.toggle);
   const handlePress = onPress ?? (() => router.push(`/marketplace/${vehicle.id}` as never));
+
+  const handleCompare = () => {
+    const res = toggleCompare(vehicle.id);
+    if (res.rejected === 'full') {
+      Alert.alert(
+        'Limite atteinte',
+        'Vous ne pouvez comparer que 3 voitures à la fois. Retirez-en une pour ajouter celle-ci.',
+      );
+    }
+  };
 
   if (layout === 'grid') {
     return (
@@ -144,6 +157,12 @@ export function VehicleCard({ vehicle, layout = 'full', onPress }: VehicleCardPr
             gap: 8,
           }}
         >
+          <CircleIconButton
+            name="git-compare-outline"
+            color={inCompare ? theme.color.primary : '#fff'}
+            background={inCompare ? '#fff' : undefined}
+            onPress={handleCompare}
+          />
           <CircleIconButton name="share-social-outline" onPress={() => {}} />
           <CircleIconButton
             name={favorite ? 'heart' : 'heart-outline'}
@@ -216,10 +235,12 @@ export function VehicleCard({ vehicle, layout = 'full', onPress }: VehicleCardPr
 function CircleIconButton({
   name,
   color = '#fff',
+  background,
   onPress,
 }: {
   name: React.ComponentProps<typeof Ionicons>['name'];
   color?: string;
+  background?: string;
   onPress?: () => void;
 }) {
   return (
@@ -230,7 +251,7 @@ function CircleIconButton({
         width: 34,
         height: 34,
         borderRadius: 17,
-        backgroundColor: 'rgba(0,0,0,0.35)',
+        backgroundColor: background ?? 'rgba(0,0,0,0.35)',
         alignItems: 'center',
         justifyContent: 'center',
         opacity: pressed ? 0.8 : 1,

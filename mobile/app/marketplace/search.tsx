@@ -12,6 +12,7 @@ import { CATEGORY_LABELS, filterVehicles, type SortKey, VEHICLES } from '@/lib/m
 import { useVehicles } from '@/lib/hooks/useListings';
 import { countActiveFilters, useMarketplaceStore } from '@/lib/stores/marketplace';
 import { useSavedSearchStore } from '@/lib/stores/saved-searches';
+import { useCompareStore } from '@/lib/stores/compare';
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'recent', label: 'Récents' },
@@ -27,6 +28,8 @@ export default function MarketplaceSearch() {
   const { t } = useTranslation();
   const { query, filters, sort, setQuery, patchFilters, setSort } = useMarketplaceStore();
   const addSearch = useSavedSearchStore((s) => s.add);
+  const compareIds = useCompareStore((s) => s.ids);
+  const clearCompare = useCompareStore((s) => s.clear);
 
   const { data: vehicles = VEHICLES } = useVehicles();
 
@@ -217,7 +220,12 @@ export default function MarketplaceSearch() {
       <FlatList
         data={results}
         keyExtractor={(v) => v.id}
-        contentContainerStyle={{ padding: 20, paddingTop: 12, gap: 12 }}
+        contentContainerStyle={{
+          padding: 20,
+          paddingTop: 12,
+          paddingBottom: compareIds.length >= 2 ? 100 : 20,
+          gap: 12,
+        }}
         renderItem={({ item }) => <VehicleCard vehicle={item} />}
         ListEmptyComponent={
           <View style={{ alignItems: 'center', gap: 8, padding: 32 }}>
@@ -232,6 +240,71 @@ export default function MarketplaceSearch() {
           </View>
         }
       />
+
+      {compareIds.length >= 1 ? (
+        <View
+          style={{
+            position: 'absolute',
+            left: 20,
+            right: 20,
+            bottom: 20,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            backgroundColor: theme.color.card,
+            borderRadius: theme.radius.pill,
+            paddingLeft: 18,
+            paddingRight: 8,
+            paddingVertical: 8,
+            ...theme.shadow.md,
+            borderWidth: 1,
+            borderColor: theme.color.border,
+          }}
+        >
+          <Ionicons name="git-compare" size={20} color={theme.color.primary} />
+          <View style={{ flex: 1 }}>
+            <Text variant="bodyM" weight="bold">
+              {compareIds.length} voiture{compareIds.length > 1 ? 's' : ''} à comparer
+            </Text>
+            <Text variant="caption" tone="secondary">
+              Jusqu'à 3 · tapez l'icône ⇄ pour ajouter
+            </Text>
+          </View>
+          <Pressable
+            onPress={clearCompare}
+            hitSlop={8}
+            style={{ paddingHorizontal: 10, paddingVertical: 8 }}
+          >
+            <Text variant="caption" weight="semiBold" tone="secondary">
+              Vider
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() =>
+              router.push(`/marketplace/compare?ids=${compareIds.join(',')}` as never)
+            }
+            disabled={compareIds.length < 2}
+            style={{
+              paddingHorizontal: 18,
+              paddingVertical: 12,
+              borderRadius: 999,
+              backgroundColor:
+                compareIds.length >= 2 ? theme.color.primary : theme.color.bgElevated,
+            }}
+          >
+            <Text
+              variant="bodyM"
+              weight="bold"
+              style={{
+                color:
+                  compareIds.length >= 2 ? theme.color.textInverse : theme.color.textSecondary,
+              }}
+            >
+              Comparer
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
