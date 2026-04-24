@@ -6,17 +6,24 @@ import com.kargo.api.dto.Dtos.ListingDto;
 import com.kargo.api.dto.Dtos.RentalListingDto;
 import com.kargo.api.dto.Dtos.UserDto;
 import com.kargo.api.model.Listing;
+import com.kargo.api.model.ListingView;
 import com.kargo.api.model.RentalListing;
 import com.kargo.api.model.User;
+import com.kargo.api.model.UserActivity;
 import com.kargo.api.repository.ListingRepository;
+import com.kargo.api.repository.ListingViewRepository;
 import com.kargo.api.repository.RentalListingRepository;
+import com.kargo.api.repository.UserActivityRepository;
 import com.kargo.api.repository.UserRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -30,16 +37,22 @@ public class AdminController {
     private final ListingRepository listings;
     private final RentalListingRepository rentals;
     private final UserRepository users;
+    private final ListingViewRepository listingViews;
+    private final UserActivityRepository activities;
     private final ObjectMapper mapper = new ObjectMapper();
 
     public AdminController(
             ListingRepository listings,
             RentalListingRepository rentals,
-            UserRepository users
+            UserRepository users,
+            ListingViewRepository listingViews,
+            UserActivityRepository activities
     ) {
         this.listings = listings;
         this.rentals = rentals;
         this.users = users;
+        this.listingViews = listingViews;
+        this.activities = activities;
     }
 
     // -------------------- LISTINGS --------------------
@@ -181,6 +194,87 @@ public class AdminController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // -------------------- VIEWS (qui a vu quoi) --------------------
+
+    /** Pour une annonce donnée : liste des utilisateurs connectés qui l'ont vue,
+     *  avec count de vues et dernière visite. Les vues anonymes (sans viewer FK)
+     *  sont agrégées séparément. */
+    @GetMapping("/listings/{id}/viewers")
+    public ResponseEntity<ListingViewers> listingViewers(@PathVariable UUID id) {
+        return listings.findById(id)
+                .map(l -> {
+                    List<Object[]> rows = listingViews.aggregateViewersForListing(l);
+                    List<ViewerRow> viewers = rows.stream()
+                            .map(r -> {
+                                UUID viewerId = (UUID) r[0];
+                                Instant lastViewedAt = (Instant) r[1];
+                                Long count = (Long) r[2];
+                                User u = users.findById(viewerId).orElse(null);
+                                if (u == null) return null;
+                                return new ViewerRow(UserDto.of(u), count.intValue(), lastViewedAt);
+                            })
+                            .filter(Objects::nonNull)
+                            .toList();
+                    List<ListingView> all = listingViews.findByListingOrderByViewedAtDesc(l);
+                    long anonymous = all.stream().filter(v -> v.getViewer() == null).count();
+                    int totalViewCount = l.getViewCount() == null ? 0 : l.getViewCount();
+                    return ResponseEntity.ok(new ListingViewers(
+                            id.toString(),
+                            totalViewCount,
+                            viewers.size(),
+                            (int) anonymous,
+                            viewers
+                    ));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // -------------------- USER ACTIVITY --------------------
+
+    /** Journal d'activité d'un utilisateur — 100 dernières entrées. */
+    @GetMapping("/users/{id}/activity")
+    public ResponseEntity<List<UserActivityRow>> userActivity(@PathVariable UUID id) {
+        return users.findById(id)
+                .map(u -> {
+                    List<UserActivity> list = activities.findByUserOrderByCreatedAtDesc(
+                            u, PageRequest.of(0, 100));
+                    List<UserActivityRow> out = list.stream()
+                            .map(a -> new UserActivityRow(
+                                    a.getId().toString(),
+                                    a.getType(),
+                                    a.getSummary(),
+                                    a.getMetadataJson(),
+                                    a.getCreatedAt()))
+                            .toList();
+                    return ResponseEntity.ok(out);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /** Annonces que ce user a consultées (views "données" plutôt que "reçues"). */
+    @GetMapping("/users/{id}/views-given")
+    public ResponseEntity<List<UserGivenView>> userViewsGiven(@PathVariable UUID id) {
+        return users.findById(id)
+                .map(u -> {
+                    List<ListingView> vs = listingViews.findByViewerOrderByViewedAtDesc(u);
+                    List<UserGivenView> out = vs.stream()
+                            .map(v -> {
+                                Listing l = v.getListing();
+                                return new UserGivenView(
+                                        l.getId().toString(),
+                                        l.getBrand() + " " + l.getModel(),
+                                        l.getYear(),
+                                        l.getCity(),
+                                        l.getPriceMru(),
+                                        v.getViewedAt()
+                                );
+                            })
+                            .toList();
+                    return ResponseEntity.ok(out);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     // -------------------- Helpers --------------------
 
     private List<String> parseUrls(Listing l) {
@@ -212,5 +306,32 @@ public class AdminController {
             List<ListingDto> listings,
             int totalViews,
             int totalContacts
+    ) {}
+
+    public record ListingViewers(
+            String listingId,
+            int totalViewCount,
+            int distinctAuthenticatedViewers,
+            int anonymousViewCount,
+            List<ViewerRow> viewers
+    ) {}
+
+    public record ViewerRow(UserDto user, int viewCount, Instant lastViewedAt) {}
+
+    public record UserActivityRow(
+            String id,
+            String type,
+            String summary,
+            String metadataJson,
+            Instant createdAt
+    ) {}
+
+    public record UserGivenView(
+            String listingId,
+            String listingLabel,
+            int year,
+            String city,
+            long priceMru,
+            Instant viewedAt
     ) {}
 }

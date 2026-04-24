@@ -8,6 +8,8 @@ import {
   apiPatch,
   type ApiAdminUserDetail,
   type ApiListing,
+  type ApiUserActivityRow,
+  type ApiUserGivenView,
 } from '@/lib/api';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -43,6 +45,8 @@ export default function UserDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
   const [data, setData] = useState<ApiAdminUserDetail | null>(null);
+  const [activity, setActivity] = useState<ApiUserActivityRow[]>([]);
+  const [viewsGiven, setViewsGiven] = useState<ApiUserGivenView[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -52,7 +56,14 @@ export default function UserDetailPage() {
     try {
       setLoading(true);
       setErr(null);
-      setData(await apiGet<ApiAdminUserDetail>(`/admin/users/${id}`));
+      const [detail, acts, views] = await Promise.all([
+        apiGet<ApiAdminUserDetail>(`/admin/users/${id}`),
+        apiGet<ApiUserActivityRow[]>(`/admin/users/${id}/activity`).catch(() => []),
+        apiGet<ApiUserGivenView[]>(`/admin/users/${id}/views-given`).catch(() => []),
+      ]);
+      setData(detail);
+      setActivity(acts);
+      setViewsGiven(views);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'load_failed');
     } finally {
@@ -292,8 +303,135 @@ export default function UserDetailPage() {
           </table>
         )}
       </Card>
+
+      {/* Journal d'activité */}
+      <Card>
+        <div className="px-5 py-3 border-b border-slate-100">
+          <h3 className="font-semibold">
+            Journal d'activité
+            <span className="ml-2 text-xs text-slate-500 font-normal">
+              · {activity.length} événement{activity.length > 1 ? 's' : ''} récent
+              {activity.length > 1 ? 's' : ''}
+            </span>
+          </h3>
+        </div>
+        {activity.length === 0 ? (
+          <div className="p-8 text-center text-slate-500 text-sm">
+            Aucune activité enregistrée pour cet utilisateur (logs créés depuis le déploiement du journal).
+          </div>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {activity.map((a) => (
+              <li key={a.id} className="px-5 py-3 flex items-start gap-3">
+                <span
+                  className={`mt-0.5 text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full ${activityTypeColor(a.type)}`}
+                >
+                  {activityTypeLabel(a.type)}
+                </span>
+                <div className="flex-1">
+                  <div className="text-sm">{a.summary ?? '—'}</div>
+                  {a.metadataJson ? (
+                    <div className="text-[11px] text-slate-400 font-mono mt-0.5 truncate max-w-xl">
+                      {a.metadataJson}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="text-xs text-slate-500 whitespace-nowrap">
+                  {formatDate(a.createdAt)}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      {/* Annonces consultées */}
+      <Card>
+        <div className="px-5 py-3 border-b border-slate-100">
+          <h3 className="font-semibold">
+            Annonces consultées
+            <span className="ml-2 text-xs text-slate-500 font-normal">
+              · {viewsGiven.length} vue{viewsGiven.length > 1 ? 's' : ''}
+            </span>
+          </h3>
+        </div>
+        {viewsGiven.length === 0 ? (
+          <div className="p-8 text-center text-slate-500 text-sm">
+            Cet utilisateur n'a ouvert aucune fiche annonce.
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+              <tr>
+                <th className="px-5 py-2 text-left">Annonce</th>
+                <th className="px-5 py-2 text-left">Ville</th>
+                <th className="px-5 py-2 text-right">Prix</th>
+                <th className="px-5 py-2 text-left">Vue le</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {viewsGiven.map((v, i) => (
+                <tr key={`${v.listingId}-${i}`}>
+                  <td className="px-5 py-2">
+                    <div className="font-medium">{v.listingLabel}</div>
+                    <div className="text-xs text-slate-500">{v.year}</div>
+                  </td>
+                  <td className="px-5 py-2">{v.city}</td>
+                  <td className="px-5 py-2 text-right font-mono">
+                    {v.priceMru.toLocaleString('fr-FR')} MRU
+                  </td>
+                  <td className="px-5 py-2 text-xs text-slate-500">
+                    {formatDate(v.viewedAt)}
+                  </td>
+                  <td className="px-5 py-2 text-right">
+                    <Link
+                      href={`/listings/${v.listingId}/viewers`}
+                      className="text-xs text-amber hover:underline"
+                    >
+                      Voir →
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Card>
     </>
   );
+}
+
+function activityTypeLabel(type: string): string {
+  const map: Record<string, string> = {
+    LOGIN: 'Connexion',
+    SIGNUP: 'Inscription',
+    PUBLISH_LISTING: 'Publication',
+    VIEW_LISTING: 'Vue',
+    CONTACT_LISTING: 'Contact',
+    SEND_MESSAGE: 'Message',
+    BOOK_TRIP: 'Billet',
+  };
+  return map[type] ?? type;
+}
+
+function activityTypeColor(type: string): string {
+  switch (type) {
+    case 'PUBLISH_LISTING':
+      return 'bg-emerald-100 text-emerald-700';
+    case 'CONTACT_LISTING':
+    case 'SEND_MESSAGE':
+      return 'bg-blue-100 text-blue-700';
+    case 'VIEW_LISTING':
+      return 'bg-slate-100 text-slate-600';
+    case 'LOGIN':
+    case 'SIGNUP':
+      return 'bg-amber-100 text-amber-700';
+    case 'BOOK_TRIP':
+      return 'bg-violet-100 text-violet-700';
+    default:
+      return 'bg-slate-100 text-slate-600';
+  }
 }
 
 function StatTile({

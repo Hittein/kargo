@@ -5,14 +5,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kargo.api.dto.Dtos.CreateListingRequest;
 import com.kargo.api.dto.Dtos.ListingDto;
 import com.kargo.api.model.Listing;
+import com.kargo.api.model.ListingView;
 import com.kargo.api.model.User;
 import com.kargo.api.repository.ListingRepository;
+import com.kargo.api.repository.ListingViewRepository;
+import com.kargo.api.service.ActivityLogger;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -20,10 +24,18 @@ import java.util.UUID;
 public class ListingController {
 
     private final ListingRepository listings;
+    private final ListingViewRepository views;
+    private final ActivityLogger activity;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public ListingController(ListingRepository listings) {
+    public ListingController(
+            ListingRepository listings,
+            ListingViewRepository views,
+            ActivityLogger activity
+    ) {
         this.listings = listings;
+        this.views = views;
+        this.activity = activity;
     }
 
     @GetMapping
@@ -57,28 +69,59 @@ public class ListingController {
                     .seller(principal)
                     .build();
             Listing saved = listings.save(l);
+            activity.record(principal, "PUBLISH_LISTING",
+                    String.format("A publié %s %s %d", saved.getBrand(), saved.getModel(), saved.getYear()),
+                    Map.of("listingId", saved.getId().toString(), "priceMru", saved.getPriceMru()));
             return ResponseEntity.ok(ListingDto.of(saved, parseUrls(saved)));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("invalid_payload");
         }
     }
 
-    /** Incrémente le compteur de vues. Endpoint léger, best-effort idempotent côté client. */
+    /** Incrémente le compteur de vues + crée une ligne ListingView si user authentifié. */
     @PostMapping("/{id}/view")
-    public ResponseEntity<Void> trackView(@PathVariable UUID id) {
+    public ResponseEntity<Void> trackView(
+            @AuthenticationPrincipal User principal,
+            @PathVariable UUID id
+    ) {
         listings.findById(id).ifPresent(l -> {
-            l.setViewCount(l.getViewCount() + 1);
+            int current = l.getViewCount() == null ? 0 : l.getViewCount();
+            l.setViewCount(current + 1);
             listings.save(l);
+
+            // Empêche un seller de polluer ses propres stats.
+            boolean isOwner = principal != null && l.getSeller() != null
+                    && l.getSeller().getId().equals(principal.getId());
+            if (!isOwner) {
+                views.save(ListingView.builder()
+                        .listing(l)
+                        .viewer(principal) // null OK pour visiteur anonyme
+                        .build());
+                if (principal != null) {
+                    activity.record(principal, "VIEW_LISTING",
+                            String.format("A consulté %s %s", l.getBrand(), l.getModel()),
+                            Map.of("listingId", l.getId().toString()));
+                }
+            }
         });
         return ResponseEntity.noContent().build();
     }
 
     /** Incrémente le compteur de contacts (tap sur Appeler/WhatsApp/Chat). */
     @PostMapping("/{id}/contact")
-    public ResponseEntity<Void> trackContact(@PathVariable UUID id) {
+    public ResponseEntity<Void> trackContact(
+            @AuthenticationPrincipal User principal,
+            @PathVariable UUID id
+    ) {
         listings.findById(id).ifPresent(l -> {
-            l.setContactCount(l.getContactCount() + 1);
+            int current = l.getContactCount() == null ? 0 : l.getContactCount();
+            l.setContactCount(current + 1);
             listings.save(l);
+            if (principal != null) {
+                activity.record(principal, "CONTACT_LISTING",
+                        String.format("A contacté le vendeur de %s %s", l.getBrand(), l.getModel()),
+                        Map.of("listingId", l.getId().toString()));
+            }
         });
         return ResponseEntity.noContent().build();
     }

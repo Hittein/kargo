@@ -35,14 +35,13 @@ export async function listMyListings() {
   return api.get<ApiListing[]>('/users/me/listings');
 }
 
+// Note: auth:true par défaut — si l'user est connecté, le header Bearer part et
+// le backend enregistre une ligne ListingView + UserActivity. Si pas connecté,
+// la route reste publique (permitAll), le call marche quand même sans token.
 export async function trackView(id: string) {
-  return api.post<void>(`/listings/${encodeURIComponent(id)}/view`, undefined, {
-    auth: false,
-  });
+  return api.post<void>(`/listings/${encodeURIComponent(id)}/view`, undefined);
 }
 
 export async function trackContact(id: string) {
-  return api.post<void>(`/listings/${encodeURIComponent(id)}/contact`, undefined, {
-    auth: false,
-  });
+  return api.post<void>(`/listings/${encodeURIComponent(id)}/contact`, undefined);
 }

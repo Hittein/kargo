@@ -1,6 +1,7 @@
 package com.kargo.api.controller;
 
 import com.kargo.api.dto.Dtos.*;
+import com.kargo.api.service.ActivityLogger;
 import com.kargo.api.service.AuthService;
 import com.kargo.api.service.AuthService.VerifyResult;
 import org.springframework.http.ResponseEntity;
@@ -13,9 +14,11 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService auth;
+    private final ActivityLogger activity;
 
-    public AuthController(AuthService auth) {
+    public AuthController(AuthService auth, ActivityLogger activity) {
         this.auth = auth;
+        this.activity = activity;
     }
 
     @PostMapping("/start")
@@ -39,6 +42,10 @@ public class AuthController {
         if (!res.ok) {
             return ResponseEntity.status(401).body(Map.of("error", res.reason));
         }
+        // Trace login (verify = login dans le modèle OTP). SIGNUP est implicite : le
+        // user est créé à sa première verify si le phone n'existait pas encore —
+        // on pourrait distinguer via un flag `res.isNew` plus tard.
+        activity.record(res.user, "LOGIN", "Connexion via OTP");
         return ResponseEntity.ok(new AuthResponse(res.token, UserDto.of(res.user)));
     }
 }

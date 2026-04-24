@@ -175,8 +175,13 @@ export default function ListingsPage() {
                   {l.priceMru.toLocaleString('fr-FR')} MRU
                 </td>
                 <td className="px-5 py-3 text-center">{l.photos}</td>
-                <td className="px-5 py-3 text-center text-xs text-slate-500">
-                  {l.viewCount ?? 0}
+                <td className="px-5 py-3 text-center">
+                  <Link
+                    href={`/listings/${l.id}/viewers`}
+                    className="text-xs text-slate-600 hover:text-amber hover:underline tabular-nums"
+                  >
+                    {l.viewCount ?? 0}
+                  </Link>
                 </td>
                 <td className="px-5 py-3 text-center">
                   <Badge tone={statusTone(l.status)}>{STATUS_LABEL[l.status] ?? l.status}</Badge>

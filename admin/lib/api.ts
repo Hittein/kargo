@@ -70,6 +70,37 @@ export type ApiAdminUserDetail = {
   totalContacts: number;
 };
 
+export type ApiUserActivityRow = {
+  id: string;
+  type: string;
+  summary?: string;
+  metadataJson?: string;
+  createdAt: string;
+};
+
+export type ApiUserGivenView = {
+  listingId: string;
+  listingLabel: string;
+  year: number;
+  city: string;
+  priceMru: number;
+  viewedAt: string;
+};
+
+export type ApiViewerRow = {
+  user: ApiAdminUser;
+  viewCount: number;
+  lastViewedAt: string;
+};
+
+export type ApiListingViewers = {
+  listingId: string;
+  totalViewCount: number;
+  distinctAuthenticatedViewers: number;
+  anonymousViewCount: number;
+  viewers: ApiViewerRow[];
+};
+
 export type ApiListing = {
   id: string;
   brand: string;
