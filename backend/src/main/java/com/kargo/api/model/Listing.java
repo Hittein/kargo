@@ -72,17 +72,18 @@ public class Listing {
     @Column(nullable = false, length = 8000)
     private String photoUrlsJson;
 
-    @Column(nullable = false)
+    // Integer (nullable) plutôt qu'int primitif : ddl-auto=update ne gère pas
+    // toujours proprement l'ajout d'une colonne NOT NULL sur une table qui a
+    // déjà des lignes (Postgres rejette ALTER sans DEFAULT). On lit via getters
+    // défensifs côté DTO (null → 0).
     @Builder.Default
-    private int viewCount = 0;
+    private Integer viewCount = 0;
 
-    @Column(nullable = false)
     @Builder.Default
-    private int contactCount = 0;
+    private Integer contactCount = 0;
 
-    @Column(nullable = false)
     @Builder.Default
-    private int favoriteCount = 0;
+    private Integer favoriteCount = 0;
 
     @Column(nullable = false)
     @Builder.Default

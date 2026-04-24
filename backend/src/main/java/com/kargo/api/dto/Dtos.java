@@ -51,7 +51,9 @@ public class Dtos {
                     l.getCity(), l.getDistrict(), l.getSellerName(), l.getSellerType(),
                     l.isVerified(), l.isVinVerified(), l.isKargoVerified(),
                     l.getPhotos(), urls, l.getStatus(), l.getPublishedAt(),
-                    l.getViewCount(), l.getContactCount(), l.getFavoriteCount()
+                    l.getViewCount() == null ? 0 : l.getViewCount(),
+                    l.getContactCount() == null ? 0 : l.getContactCount(),
+                    l.getFavoriteCount() == null ? 0 : l.getFavoriteCount()
             );
         }
     }
