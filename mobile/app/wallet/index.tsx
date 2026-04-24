@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -20,10 +21,14 @@ type Action = {
 export default function WalletHome() {
   const theme = useTheme();
   const router = useRouter();
-  const { balance, points, cardLast4, cardFrozen, balanceVisible, toggleBalance, transactions } =
+  const { balance, points, cardLast4, cardFrozen, balanceVisible, toggleBalance, transactions, hydrate } =
     useWalletStore();
   const { current, next } = tierFromPoints(points);
   const summary = monthlySummary();
+
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
 
   const actions: Action[] = [
     { key: 'topup', icon: 'add-circle', label: 'Recharger', href: '/wallet/topup' },

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { FlatList, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,6 +13,7 @@ import {
   RENTALS,
   type RentalCategory,
 } from '@/lib/mocks/rentals';
+import { useRentals } from '@/lib/hooks/useRentals';
 import { useRentalStore } from '@/lib/stores/rental';
 
 const CATEGORIES: RentalCategory[] = [
@@ -28,10 +29,11 @@ export default function RentalResults() {
   const scheme = useThemeScheme();
   const router = useRouter();
   const { search, filters, setFilters } = useRentalStore();
+  const { data: rentals, isLoading } = useRentals();
 
   const results = useMemo(
     () =>
-      filterRentals(RENTALS, {
+      filterRentals(rentals ?? RENTALS, {
         city: search.city,
         category: filters.category ?? search.category,
         withChauffeur: filters.withChauffeur,
@@ -39,7 +41,7 @@ export default function RentalResults() {
         minSeats: filters.minSeats,
         maxPricePerDay: filters.maxPricePerDay,
       }),
-    [filters, search],
+    [filters, search, rentals],
   );
 
   return (
@@ -109,15 +111,21 @@ export default function RentalResults() {
         contentContainerStyle={{ padding: 16, paddingTop: 4, gap: 12 }}
         renderItem={({ item }) => <RentalCard rental={item} />}
         ListEmptyComponent={
-          <View style={{ alignItems: 'center', gap: 8, padding: 32 }}>
-            <Ionicons name="car-outline" size={40} color={theme.color.textSecondary} />
-            <Text variant="bodyL" weight="semiBold">
-              Aucune voiture disponible
-            </Text>
-            <Text variant="bodyM" tone="secondary" align="center">
-              Changez de ville ou élargissez vos filtres.
-            </Text>
-          </View>
+          isLoading ? (
+            <View style={{ alignItems: 'center', padding: 48 }}>
+              <ActivityIndicator color={theme.color.primary} />
+            </View>
+          ) : (
+            <View style={{ alignItems: 'center', gap: 8, padding: 32 }}>
+              <Ionicons name="car-outline" size={40} color={theme.color.textSecondary} />
+              <Text variant="bodyL" weight="semiBold">
+                Aucune voiture disponible
+              </Text>
+              <Text variant="bodyM" tone="secondary" align="center">
+                Changez de ville ou élargissez vos filtres.
+              </Text>
+            </View>
+          )
         }
       />
     </SafeAreaView>

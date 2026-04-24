@@ -7,6 +7,7 @@ import { VehiclePhotoCarousel } from '@/components/VehiclePhotoCarousel';
 import { useTheme } from '@/theme/ThemeProvider';
 import { formatMRU } from '@/lib/format';
 import { getRentalById, RENTAL_CATEGORY_LABEL } from '@/lib/mocks/rentals';
+import { useRental } from '@/lib/hooks/useRentals';
 import { useRentalStore } from '@/lib/stores/rental';
 
 function daysBetween(startISO?: string, endISO?: string): number {
@@ -20,7 +21,8 @@ export default function RentalDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const theme = useTheme();
-  const rental = getRentalById(id ?? '');
+  const { data: apiRental } = useRental(id);
+  const rental = apiRental ?? getRentalById(id ?? '');
   const { search, setQuote } = useRentalStore();
 
   const days = daysBetween(search.startDate, search.endDate);
