@@ -37,6 +37,39 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   return res.json();
 }
 
+export type ApiAdminUser = {
+  id: string;
+  phone: string;
+  name: string;
+  email?: string;
+  city?: string;
+  avatarUrl?: string;
+  phoneVerified: boolean;
+  emailVerified: boolean;
+  kycLevel: 0 | 1 | 2 | 3;
+  hasPin: boolean;
+  hasBiometric: boolean;
+  trustScore: number;
+  role: string;
+  createdAt: string;
+};
+
+export type ApiAdminUserRow = {
+  user: ApiAdminUser;
+  listingsTotal: number;
+  listingsActive: number;
+  listingsPending: number;
+  totalViews: number;
+  totalContacts: number;
+};
+
+export type ApiAdminUserDetail = {
+  user: ApiAdminUser;
+  listings: ApiListing[];
+  totalViews: number;
+  totalContacts: number;
+};
+
 export type ApiListing = {
   id: string;
   brand: string;
