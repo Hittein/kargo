@@ -1,9 +1,8 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
 
-// EAS project + updates URL — to be filled in after `eas init` (see RUNBOOK).
-// Until then, OTA is inactive but the app still ships from the bundled JS.
-const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID || '';
-const UPDATES_URL = EAS_PROJECT_ID ? `https://u.expo.dev/${EAS_PROJECT_ID}` : undefined;
+// EAS project — set par `eas init` le 2026-04-24, override possible via env.
+const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID || '8baafdc5-34ca-4da3-86ab-9b1ca8456299';
+const UPDATES_URL = `https://u.expo.dev/${EAS_PROJECT_ID}`;
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -82,15 +81,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   // (here 1.0.0) ships via `eas update --branch production` without a rebuild.
   // Bumping `version` here triggers a new native build + a new TestFlight submit.
   runtimeVersion: { policy: 'appVersion' },
-  updates: UPDATES_URL
-    ? {
-        url: UPDATES_URL,
-        fallbackToCacheTimeout: 0,
-      }
-    : undefined,
+  updates: {
+    url: UPDATES_URL,
+    fallbackToCacheTimeout: 0,
+  },
   extra: {
     router: { origin: false },
-    eas: EAS_PROJECT_ID ? { projectId: EAS_PROJECT_ID } : undefined,
+    eas: { projectId: EAS_PROJECT_ID },
   },
   experiments: {
     typedRoutes: true,
