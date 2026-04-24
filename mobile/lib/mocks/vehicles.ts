@@ -413,15 +413,18 @@ export type VehicleFilters = {
   minPrice?: number;
   maxPrice?: number;
   minYear?: number;
+  maxYear?: number;
+  minKm?: number;
   maxKm?: number;
   fuel?: FuelType[];
   transmission?: Transmission[];
   city?: string[];
   verifiedOnly?: boolean;
   kargoVerifiedOnly?: boolean;
+  aiVerdict?: AIVerdict[];
 };
 
-export type SortKey = 'recent' | 'price-asc' | 'price-desc' | 'km-asc';
+export type SortKey = 'recent' | 'price-asc' | 'price-desc' | 'km-asc' | 'year-desc';
 
 export function filterVehicles(
   list: Vehicle[],
@@ -440,12 +443,15 @@ export function filterVehicles(
     if (filters.minPrice != null && v.price < filters.minPrice) return false;
     if (filters.maxPrice != null && v.price > filters.maxPrice) return false;
     if (filters.minYear != null && v.year < filters.minYear) return false;
+    if (filters.maxYear != null && v.year > filters.maxYear) return false;
+    if (filters.minKm != null && v.km < filters.minKm) return false;
     if (filters.maxKm != null && v.km > filters.maxKm) return false;
     if (filters.fuel?.length && !filters.fuel.includes(v.fuel)) return false;
     if (filters.transmission?.length && !filters.transmission.includes(v.transmission)) return false;
     if (filters.city?.length && !filters.city.includes(v.city)) return false;
     if (filters.verifiedOnly && !v.verified) return false;
     if (filters.kargoVerifiedOnly && !v.kargoVerified) return false;
+    if (filters.aiVerdict?.length && !filters.aiVerdict.includes(v.aiVerdict)) return false;
     return true;
   });
   const sorted = [...filtered];
@@ -458,6 +464,9 @@ export function filterVehicles(
       break;
     case 'km-asc':
       sorted.sort((a, b) => a.km - b.km);
+      break;
+    case 'year-desc':
+      sorted.sort((a, b) => b.year - a.year);
       break;
     case 'recent':
     default:

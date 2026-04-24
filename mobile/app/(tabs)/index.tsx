@@ -191,7 +191,7 @@ export default function HomeScreen() {
                   </Text>
                 </View>
                 <Pressable
-                  onPress={() => router.push('/wallet' as never)}
+                  onPress={() => router.push('/notifications' as never)}
                   hitSlop={8}
                   style={{
                     width: 44,
@@ -294,11 +294,8 @@ export default function HomeScreen() {
                 <View
                   style={{
                     height: 88,
-                    borderRadius: 14,
-                    backgroundColor: '#FFFFFF',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    padding: 8,
                   }}
                 >
                   <Image

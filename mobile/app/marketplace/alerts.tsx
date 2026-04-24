@@ -1,4 +1,5 @@
-import { FlatList, Pressable, View } from 'react-native';
+import { useEffect } from 'react';
+import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,20 +15,18 @@ export default function AlertsScreen() {
   const theme = useTheme();
   const scheme = useThemeScheme();
   const router = useRouter();
-  const { searches, remove, toggleNotify, markViewed } = useSavedSearchStore();
+  const { searches, remove, toggleNotify, markViewed, syncFromRemote, syncing } =
+    useSavedSearchStore();
   const { setFilters, setQuery } = useMarketplaceStore();
+
+  useEffect(() => {
+    syncFromRemote();
+  }, [syncFromRemote]);
 
   const openSearch = (s: SavedSearch) => {
     markViewed(s.id);
-    setQuery('');
-    setFilters({
-      category: s.category,
-      brand: s.brand,
-      model: s.model,
-      maxPrice: s.maxPrice,
-      minYear: s.minYear,
-      city: s.city ? [s.city] : undefined,
-    });
+    setQuery(s.query ?? '');
+    setFilters(s.filters ?? {});
     router.push('/marketplace/search');
   };
 
@@ -54,6 +53,13 @@ export default function AlertsScreen() {
         data={searches}
         keyExtractor={(s) => s.id}
         contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={syncing}
+            onRefresh={syncFromRemote}
+            tintColor={theme.color.primary}
+          />
+        }
         ListHeaderComponent={
           <Card variant="soft">
             <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
@@ -131,14 +137,28 @@ function SearchRow({
   onDelete: () => void;
 }) {
   const theme = useTheme();
+  const f = search.filters ?? {};
   const criteria: string[] = [];
-  if (search.category) criteria.push(CATEGORY_LABELS[search.category]);
-  if (search.brand) criteria.push(search.brand);
-  if (search.model) criteria.push(search.model);
-  if (search.minYear) criteria.push(`≥ ${search.minYear}`);
-  if (search.maxPrice) criteria.push(`≤ ${formatMRU(search.maxPrice)} MRU`);
-  if (search.city) criteria.push(search.city);
+  const cat = f.category ?? search.category;
+  if (cat) criteria.push(CATEGORY_LABELS[cat]);
+  if (f.brand ?? search.brand) criteria.push((f.brand ?? search.brand) as string);
+  if (f.model ?? search.model) criteria.push((f.model ?? search.model) as string);
+  const minY = f.minYear ?? search.minYear;
+  if (minY) criteria.push(`≥ ${minY}`);
+  if (f.maxYear) criteria.push(`≤ ${f.maxYear}`);
+  const maxP = f.maxPrice ?? search.maxPrice;
+  if (maxP) criteria.push(`≤ ${formatMRU(maxP)} MRU`);
+  if (f.minPrice) criteria.push(`≥ ${formatMRU(f.minPrice)} MRU`);
+  if (f.maxKm) criteria.push(`< ${Math.round(f.maxKm / 1000)}K km`);
+  if (f.fuel?.length) criteria.push(f.fuel.join('/'));
+  if (f.transmission?.length) criteria.push(f.transmission.join('/'));
+  const cities = f.city?.length ? f.city.join(', ') : search.city;
+  if (cities) criteria.push(cities);
+  if (f.verifiedOnly) criteria.push('Vérifiés');
+  if (f.kargoVerifiedOnly) criteria.push('Kargo Verified');
+  if (f.aiVerdict?.length) criteria.push(`IA: ${f.aiVerdict.join('/')}`);
   if (search.freshlyImportedOnly) criteria.push('Fraîchement dédouanée');
+  if (search.query) criteria.push(`« ${search.query} »`);
 
   return (
     <Card onPress={onOpen}>

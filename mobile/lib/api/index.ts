@@ -5,3 +5,4 @@ export * as listingsApi from './listings';
 export * as tripsApi from './trips';
 export * as walletApi from './wallet';
 export * as rentalsApi from './rentals';
+export * as savedSearchesApi from './saved-searches';

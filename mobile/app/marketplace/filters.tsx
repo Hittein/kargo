@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Badge, Button, Card, Chip, Input, Screen, StickyCTA, Text } from '@/components/ui';
 import { useTheme } from '@/theme/ThemeProvider';
 import {
+  type AIVerdict,
   filterVehicles,
   type FuelType,
   type Transmission,
@@ -23,6 +24,12 @@ const FUELS: { key: FuelType; label: string }[] = [
 const TRANSMISSIONS: { key: Transmission; label: string }[] = [
   { key: 'auto', label: 'Auto' },
   { key: 'manual', label: 'Manuelle' },
+];
+const AI_VERDICTS: { key: AIVerdict; label: string }[] = [
+  { key: 'deal', label: '💚 Bonne affaire' },
+  { key: 'fair', label: 'Prix juste' },
+  { key: 'high', label: 'Prix élevé' },
+  { key: 'risk', label: '⚠️ À risque' },
 ];
 
 function toggleInArray<T>(arr: T[] | undefined, value: T): T[] {
@@ -83,15 +90,42 @@ export default function MarketplaceFilters() {
 
         <Card variant="sand">
           <Text variant="caption" tone="secondary">
-            Année minimum
+            Année
           </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingTop: 10 }}>
+          <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+            <Input
+              containerStyle={{ flex: 1 }}
+              placeholder="De"
+              keyboardType="numeric"
+              maxLength={4}
+              value={draft.minYear?.toString() ?? ''}
+              onChangeText={(v) => patch({ minYear: v ? Number(v) : undefined })}
+            />
+            <Input
+              containerStyle={{ flex: 1 }}
+              placeholder="À"
+              keyboardType="numeric"
+              maxLength={4}
+              value={draft.maxYear?.toString() ?? ''}
+              onChangeText={(v) => patch({ maxYear: v ? Number(v) : undefined })}
+            />
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, paddingTop: 10 }}
+          >
             {[2015, 2018, 2020, 2022, 2024].map((year) => (
               <Chip
                 key={year}
                 label={`${year}+`}
-                active={draft.minYear === year}
-                onPress={() => patch({ minYear: draft.minYear === year ? undefined : year })}
+                active={draft.minYear === year && draft.maxYear == null}
+                onPress={() =>
+                  patch({
+                    minYear: draft.minYear === year ? undefined : year,
+                    maxYear: undefined,
+                  })
+                }
               />
             ))}
           </ScrollView>
@@ -99,15 +133,40 @@ export default function MarketplaceFilters() {
 
         <Card variant="sand">
           <Text variant="caption" tone="secondary">
-            Kilométrage maximum
+            Kilométrage
           </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingTop: 10 }}>
+          <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+            <Input
+              containerStyle={{ flex: 1 }}
+              placeholder="Min (km)"
+              keyboardType="numeric"
+              value={draft.minKm?.toString() ?? ''}
+              onChangeText={(v) => patch({ minKm: v ? Number(v) : undefined })}
+            />
+            <Input
+              containerStyle={{ flex: 1 }}
+              placeholder="Max (km)"
+              keyboardType="numeric"
+              value={draft.maxKm?.toString() ?? ''}
+              onChangeText={(v) => patch({ maxKm: v ? Number(v) : undefined })}
+            />
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, paddingTop: 10 }}
+          >
             {[30_000, 60_000, 100_000, 150_000].map((km) => (
               <Chip
                 key={km}
                 label={`< ${km / 1000}K km`}
-                active={draft.maxKm === km}
-                onPress={() => patch({ maxKm: draft.maxKm === km ? undefined : km })}
+                active={draft.maxKm === km && draft.minKm == null}
+                onPress={() =>
+                  patch({
+                    maxKm: draft.maxKm === km ? undefined : km,
+                    minKm: undefined,
+                  })
+                }
               />
             ))}
           </ScrollView>
@@ -156,6 +215,26 @@ export default function MarketplaceFilters() {
                 label={c}
                 active={draft.city?.includes(c)}
                 onPress={() => patch({ city: toggleInArray(draft.city, c) })}
+              />
+            ))}
+          </View>
+        </Card>
+
+        <Card variant="sand">
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="sparkles" size={14} color={theme.color.primary} />
+            <Text variant="caption" tone="secondary">
+              Verdict IA
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', paddingTop: 10 }}>
+            {AI_VERDICTS.map((v) => (
+              <Chip
+                key={v.key}
+                label={v.label}
+                active={draft.aiVerdict?.includes(v.key)}
+                tone={draft.aiVerdict?.includes(v.key) ? 'primary' : undefined}
+                onPress={() => patch({ aiVerdict: toggleInArray(draft.aiVerdict, v.key) })}
               />
             ))}
           </View>

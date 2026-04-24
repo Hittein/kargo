@@ -1,9 +1,10 @@
-import { Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import * as ImagePicker from 'expo-image-picker';
 import { Badge, Button, Card, StickyCTA, Text } from '@/components/ui';
 import { SellStepper } from '@/components/SellStepper';
 import { useTheme, useThemeScheme } from '@/theme/ThemeProvider';
@@ -33,6 +34,48 @@ export default function SellPhotos() {
   const router = useRouter();
   const { draft, addPhoto, removePhoto, movePhotoFirst } = useSellStore();
   const canContinue = draft.photoUrls.length >= 3;
+  const remainingSlots = 20 - draft.photoUrls.length;
+
+  const pickFromLibrary = async () => {
+    if (remainingSlots <= 0) return;
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert(
+        'Accès photos refusé',
+        'Autorisez Kargo à accéder à vos photos dans les Réglages.',
+      );
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      selectionLimit: remainingSlots,
+      quality: 0.85,
+    });
+    if (res.canceled) return;
+    for (const asset of res.assets) {
+      addPhoto(asset.uri);
+    }
+  };
+
+  const takePhoto = async () => {
+    if (remainingSlots <= 0) return;
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert(
+        'Accès caméra refusé',
+        'Autorisez Kargo à utiliser la caméra dans les Réglages.',
+      );
+      return;
+    }
+    const res = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.85,
+    });
+    if (res.canceled) return;
+    const asset = res.assets[0];
+    if (asset) addPhoto(asset.uri);
+  };
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.color.bg }}>
@@ -86,6 +129,51 @@ export default function SellPhotos() {
               label={`${draft.photoUrls.length}/20`}
               tone={draft.photoUrls.length >= 3 ? 'success' : 'neutral'}
             />
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+            <Pressable
+              onPress={takePhoto}
+              disabled={remainingSlots <= 0}
+              style={({ pressed }) => ({
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                paddingVertical: 14,
+                borderRadius: 14,
+                backgroundColor: theme.color.primary,
+                opacity: pressed || remainingSlots <= 0 ? 0.6 : 1,
+              })}
+            >
+              <Ionicons name="camera" size={18} color={theme.color.textInverse} />
+              <Text variant="bodyM" weight="semiBold" style={{ color: theme.color.textInverse }}>
+                Caméra
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={pickFromLibrary}
+              disabled={remainingSlots <= 0}
+              style={({ pressed }) => ({
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                paddingVertical: 14,
+                borderRadius: 14,
+                backgroundColor: theme.color.bgElevated,
+                borderWidth: 1,
+                borderColor: theme.color.border,
+                opacity: pressed || remainingSlots <= 0 ? 0.6 : 1,
+              })}
+            >
+              <Ionicons name="images" size={18} color={theme.color.text} />
+              <Text variant="bodyM" weight="semiBold">
+                Galerie
+              </Text>
+            </Pressable>
           </View>
 
           {draft.photoUrls.length === 0 ? (

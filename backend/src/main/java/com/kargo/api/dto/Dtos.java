@@ -7,6 +7,7 @@ import com.kargo.api.model.Wallet;
 import com.kargo.api.model.Transaction;
 import com.kargo.api.model.Company;
 import com.kargo.api.model.RentalListing;
+import com.kargo.api.model.SavedSearch;
 
 import java.time.Instant;
 import java.util.List;
@@ -148,5 +149,32 @@ public class Dtos {
             String brand, String model, int year, Integer importYear, int ownersInCountry,
             long priceMru, int km, String fuel, String transmission, String city, String district,
             String sellerName, String sellerType, boolean kargoVerified, List<String> photoUrls
+    ) {}
+
+    /** Snapshot d'une recherche sauvegardée. filtersJson = VehicleFilters sérialisé côté mobile. */
+    public record SavedSearchDto(
+            String id, String name, String filtersJson, String sort, String query,
+            String category, boolean freshlyImportedOnly, boolean notifyEnabled,
+            int lastMatchCount, int newMatchesSinceLastView,
+            Instant createdAt, Instant updatedAt
+    ) {
+        public static SavedSearchDto of(SavedSearch s) {
+            return new SavedSearchDto(
+                    s.getId().toString(), s.getName(), s.getFiltersJson(), s.getSort(), s.getQuery(),
+                    s.getCategory(), s.isFreshlyImportedOnly(), s.isNotifyEnabled(),
+                    s.getLastMatchCount(), s.getNewMatchesSinceLastView(),
+                    s.getCreatedAt(), s.getUpdatedAt()
+            );
+        }
+    }
+
+    public record CreateSavedSearchRequest(
+            String name, String filtersJson, String sort, String query,
+            String category, Boolean freshlyImportedOnly, Boolean notifyEnabled
+    ) {}
+
+    public record UpdateSavedSearchRequest(
+            String name, String filtersJson, String sort, String query,
+            String category, Boolean freshlyImportedOnly, Boolean notifyEnabled
     ) {}
 }

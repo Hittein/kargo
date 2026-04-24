@@ -31,7 +31,6 @@ export default function OtpScreen() {
   const verifyOtp = useAuthStore((s) => s.verifyOtp);
   const resendOtp = useAuthStore((s) => s.resendOtp);
   const setSession = useAuthStore((s) => s.setSession);
-  const user = useAuthStore((s) => s.user);
 
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +65,9 @@ export default function OtpScreen() {
       // Try real backend first.
       const res = await authApi.verifyOtp(pending.phone, code);
       setSession(fromApi(res.user), res.token);
-      if (res.user.name) router.replace('/(tabs)');
+      // Lire le user mergé (setSession peut avoir re-hydraté depuis knownProfiles).
+      const fresh = useAuthStore.getState().user;
+      if (fresh?.name) router.replace('/(tabs)');
       else router.replace('/(auth)/profile-init');
       return;
     } catch (err: unknown) {
@@ -82,7 +83,8 @@ export default function OtpScreen() {
         setError(messages[local.reason ?? 'invalid']);
         return;
       }
-      if (user && user.name) router.replace('/(tabs)');
+      const fresh = useAuthStore.getState().user;
+      if (fresh?.name) router.replace('/(tabs)');
       else router.replace('/(auth)/profile-init');
     } finally {
       setLoading(false);

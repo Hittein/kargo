@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { Badge, Button, Card, Input, Text } from '@/components/ui';
 import { SellStepper } from '@/components/SellStepper';
 import { useTheme, useThemeScheme } from '@/theme/ThemeProvider';
 import { useSellStore } from '@/lib/stores/sell';
+import { decodeVin, VinDecodeError } from '@/lib/api/vin';
 
 export default function SellVin() {
   const theme = useTheme();
@@ -20,22 +21,53 @@ export default function SellVin() {
 
   const valid = vin.trim().length === 17;
 
-  const handleDecode = () => {
+  const handleDecode = async () => {
     setScanning(true);
-    setTimeout(() => {
+    try {
+      const r = await decodeVin(vin);
+      if (!r.brand && !r.model && !r.year) {
+        Alert.alert(
+          'VIN non reconnu',
+          'Aucune information exploitable pour ce VIN. Vous pouvez continuer en saisie manuelle.',
+          [
+            { text: 'Réessayer', style: 'cancel' },
+            {
+              text: 'Saisie manuelle',
+              onPress: () => {
+                patch({ vin, vinDecoded: false });
+                router.push('/marketplace/sell/specs');
+              },
+            },
+          ],
+        );
+        return;
+      }
       patch({
         vin,
         vinDecoded: true,
-        brand: 'Toyota',
-        model: 'Hilux',
-        year: 2021,
-        fuel: 'diesel',
-        transmission: 'manual',
-        bodyType: 'Pick-up',
+        brand: r.brand,
+        model: r.model,
+        year: r.year,
+        fuel: r.fuel,
+        transmission: r.transmission,
+        bodyType: r.bodyType,
       });
-      setScanning(false);
       router.push('/marketplace/sell/specs');
-    }, 800);
+    } catch (e) {
+      const msg = e instanceof VinDecodeError ? e.message : 'Erreur lors du décodage du VIN.';
+      Alert.alert('Décodage VIN', msg, [
+        { text: 'Réessayer', style: 'cancel' },
+        {
+          text: 'Saisie manuelle',
+          onPress: () => {
+            patch({ vin: undefined, vinDecoded: false });
+            router.push('/marketplace/sell/specs');
+          },
+        },
+      ]);
+    } finally {
+      setScanning(false);
+    }
   };
 
   return (

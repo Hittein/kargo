@@ -28,12 +28,15 @@ export const useMarketplaceStore = create<State>((set) => ({
 export function countActiveFilters(f: VehicleFilters): number {
   let n = 0;
   if (f.minPrice != null || f.maxPrice != null) n++;
-  if (f.minYear != null) n++;
-  if (f.maxKm != null) n++;
+  if (f.minYear != null || f.maxYear != null) n++;
+  if (f.minKm != null || f.maxKm != null) n++;
   if (f.fuel?.length) n++;
   if (f.transmission?.length) n++;
   if (f.city?.length) n++;
   if (f.verifiedOnly) n++;
   if (f.kargoVerifiedOnly) n++;
+  if (f.aiVerdict?.length) n++;
+  if (f.brand) n++;
+  if (f.model) n++;
   return n;
 }

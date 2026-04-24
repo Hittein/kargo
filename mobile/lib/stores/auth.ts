@@ -24,11 +24,22 @@ type PendingOtp = {
   attempts: number;
 };
 
+/** Profil connu pour un numéro, conservé entre deux sessions (survit au signOut).
+ *  Permet de re-hydrater le user quand le backend ne connaît pas encore le profil
+ *  (onboarding fait offline, puis re-login) ou quand on revient après un signOut. */
+type KnownProfile = {
+  name: string;
+  email?: string;
+  city?: string;
+  avatarUrl?: string;
+};
+
 type State = {
   user: AuthUser | null;
   token: string | null;
   pendingOtp: PendingOtp | null;
   hasOnboarded: boolean;
+  knownProfiles: Record<string, KnownProfile>;
 
   startSignIn: (phone: string) => string;
   verifyOtp: (code: string) => { ok: boolean; reason?: 'expired' | 'invalid' | 'too_many' };
@@ -46,6 +57,22 @@ type State = {
   setBiometric: (enabled: boolean) => void;
 };
 
+function rememberProfile(
+  registry: Record<string, KnownProfile>,
+  user: AuthUser,
+): Record<string, KnownProfile> {
+  if (!user.name) return registry;
+  return {
+    ...registry,
+    [user.phone]: {
+      name: user.name,
+      email: user.email,
+      city: user.city,
+      avatarUrl: user.avatarUrl,
+    },
+  };
+}
+
 const SIM_OTP_TTL_MS = 5 * 60 * 1000;
 
 function genOtp() {
@@ -59,6 +86,7 @@ export const useAuthStore = create<State>()(
       token: null,
       pendingOtp: null,
       hasOnboarded: false,
+      knownProfiles: {},
 
       startSignIn: (phone) => {
         const code = genOtp();
@@ -86,16 +114,20 @@ export const useAuthStore = create<State>()(
         }
         const now = new Date().toISOString();
         const existing = get().user;
-        // Si le user existant a le même phone, on conserve son profil ; sinon
-        // c'est une nouvelle inscription : on part sur un user vierge pour
-        // éviter de récupérer un "name" fantôme d'une session précédente.
+        const known = get().knownProfiles[pendingOtp.phone];
+        // Si le user actif a le même phone, on conserve son profil. Sinon, on
+        // cherche un profil connu (signOut antérieur) pour re-hydrater afin de
+        // ne pas re-demander le prénom. Sinon, c'est vraiment un nouveau compte.
         const keepExisting = existing && existing.phone === pendingOtp.phone;
         const user: AuthUser = keepExisting
           ? { ...existing, phoneVerified: true }
           : {
               id: `usr_${Date.now()}`,
               phone: pendingOtp.phone,
-              name: '',
+              name: known?.name ?? '',
+              email: known?.email,
+              city: known?.city,
+              avatarUrl: known?.avatarUrl,
               createdAt: now,
               emailVerified: false,
               phoneVerified: true,
@@ -125,26 +157,48 @@ export const useAuthStore = create<State>()(
         return code;
       },
       completeProfile: (data) => {
-        const { user } = get();
+        const { user, knownProfiles } = get();
         if (!user) return;
-        set({
-          user: {
-            ...user,
-            name: data.name,
-            email: data.email,
-            city: data.city,
-          },
-        });
+        const next: AuthUser = {
+          ...user,
+          name: data.name,
+          email: data.email,
+          city: data.city,
+        };
+        set({ user: next, knownProfiles: rememberProfile(knownProfiles, next) });
       },
       signOut: () => set({ user: null, token: null, pendingOtp: null }),
       setOnboarded: () => set({ hasOnboarded: true }),
 
-      setSession: (user, token) => set({ user, token, pendingOtp: null }),
+      setSession: (user, token) => {
+        const { knownProfiles } = get();
+        const known = knownProfiles[user.phone];
+        // Si le backend nous renvoie un user sans name mais qu'on a un profil
+        // connu pour ce téléphone (onboarding fait offline ou signOut antérieur),
+        // on ré-hydrate. Empêche l'écran Bienvenue de réapparaître.
+        const merged: AuthUser =
+          user.name || !known
+            ? user
+            : {
+                ...user,
+                name: known.name,
+                email: user.email ?? known.email,
+                city: user.city ?? known.city,
+                avatarUrl: user.avatarUrl ?? known.avatarUrl,
+              };
+        set({
+          user: merged,
+          token,
+          pendingOtp: null,
+          knownProfiles: rememberProfile(knownProfiles, merged),
+        });
+      },
 
       updateProfile: (patch) => {
-        const { user } = get();
+        const { user, knownProfiles } = get();
         if (!user) return;
-        set({ user: { ...user, ...patch } });
+        const next = { ...user, ...patch };
+        set({ user: next, knownProfiles: rememberProfile(knownProfiles, next) });
       },
       setKycLevel: (level) => {
         const { user } = get();
@@ -165,7 +219,12 @@ export const useAuthStore = create<State>()(
     {
       name: 'kargo:auth',
       storage: createJSONStorage(() => mmkvStorage),
-      partialize: (s) => ({ user: s.user, token: s.token, hasOnboarded: s.hasOnboarded }),
+      partialize: (s) => ({
+        user: s.user,
+        token: s.token,
+        hasOnboarded: s.hasOnboarded,
+        knownProfiles: s.knownProfiles,
+      }),
     },
   ),
 );

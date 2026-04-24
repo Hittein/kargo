@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { FlatList, Pressable, ScrollView, View } from 'react-native';
+import { Alert, FlatList, Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -59,18 +59,33 @@ export default function MarketplaceSearch() {
               if (filters.category) parts.push(CATEGORY_LABELS[filters.category]);
               if (filters.brand) parts.push(filters.brand);
               if (filters.model) parts.push(filters.model);
+              if (filters.minYear || filters.maxYear) {
+                parts.push(
+                  `${filters.minYear ?? '?'}-${filters.maxYear ?? 'auj.'}`,
+                );
+              }
+              if (filters.maxPrice) parts.push(`≤ ${Math.round(filters.maxPrice / 1000)}K`);
+              if (filters.maxKm) parts.push(`< ${Math.round(filters.maxKm / 1000)}K km`);
+              if (filters.fuel?.length) parts.push(filters.fuel.join('/'));
+              if (filters.city?.length) parts.push(filters.city.join(','));
               if (query) parts.push(`« ${query} »`);
               if (parts.length === 0) parts.push('Tous véhicules');
+              const name = parts.join(' · ');
               addSearch({
-                name: parts.join(' · '),
+                name,
+                filters,
+                sort,
+                query: query || undefined,
                 category: filters.category,
-                brand: filters.brand,
-                model: filters.model,
-                maxPrice: filters.maxPrice,
-                minYear: filters.minYear,
-                city: filters.city?.[0],
               });
-              router.push('/marketplace/alerts');
+              Alert.alert(
+                'Recherche sauvegardée',
+                `${name}\n\nVous serez alerté dès qu'une nouvelle annonce correspond à ces critères.`,
+                [
+                  { text: 'OK', style: 'cancel' },
+                  { text: 'Voir mes alertes', onPress: () => router.push('/marketplace/alerts') },
+                ],
+              );
             }}
             hitSlop={8}
             style={{ padding: 4 }}
