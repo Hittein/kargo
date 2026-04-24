@@ -41,6 +41,10 @@ function formatDate(iso: string) {
   }
 }
 
+function formatMRU(n: number) {
+  return n.toLocaleString('fr-FR');
+}
+
 export default function UserDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
@@ -50,6 +54,8 @@ export default function UserDetailPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [expandedListing, setExpandedListing] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<{ photos: string[]; idx: number } | null>(null);
 
   const load = async () => {
     if (!id) return;
@@ -113,292 +119,467 @@ export default function UserDetailPage() {
   const { user, listings, totalViews, totalContacts } = data;
   const activeCount = listings.filter((l) => l.status === 'active').length;
   const pendingCount = listings.filter((l) => l.status === 'pending').length;
+  const rejectedCount = listings.filter((l) => l.status === 'rejected').length;
+  const soldCount = listings.filter((l) => l.status === 'sold').length;
 
   return (
     <>
-      <PageHeader
-        title={user.name || user.phone}
-        subtitle={`Inscrit le ${formatDate(user.createdAt)}`}
-        actions={
-          <Link
-            href="/users"
-            className="px-3 py-1.5 rounded-md bg-slate-100 text-sm font-semibold text-slate-700 hover:bg-slate-200"
-          >
-            ← Tous les utilisateurs
-          </Link>
-        }
-      />
+      <div className="mb-6">
+        <Link
+          href="/users"
+          className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900"
+        >
+          ← Tous les utilisateurs
+        </Link>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Profil détail */}
-        <Card>
-          <div className="p-5 flex flex-col items-center gap-3">
-            <div className="w-20 h-20 rounded-full bg-navy text-white flex items-center justify-center text-3xl font-bold">
-              {(user.name || '?').slice(0, 1).toUpperCase()}
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold">{user.name || '—'}</div>
-              <div className="text-xs text-slate-500 mt-1">{user.phone}</div>
-              {user.email ? (
-                <div className="text-xs text-slate-500">{user.email}</div>
-              ) : null}
-              {user.city ? (
-                <div className="text-xs text-slate-500">📍 {user.city}</div>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap gap-1 justify-center">
-              <Badge tone={user.phoneVerified ? 'success' : 'neutral'}>
-                {user.phoneVerified ? 'Tél. vérifié' : 'Tél. non vérifié'}
-              </Badge>
-              {user.emailVerified ? <Badge tone="success">Email OK</Badge> : null}
-              <Badge
-                tone={
-                  user.kycLevel >= 2 ? 'success' : user.kycLevel === 1 ? 'warn' : 'neutral'
-                }
-              >
-                KYC niveau {user.kycLevel}
-              </Badge>
-              {user.hasPin ? <Badge tone="neutral">PIN</Badge> : null}
-              {user.hasBiometric ? <Badge tone="neutral">Biométrie</Badge> : null}
-              {user.role !== 'user' ? <Badge tone="warn">{user.role}</Badge> : null}
-            </div>
-            <div className="w-full pt-3 border-t border-slate-100">
-              <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-                <span>Trust score</span>
-                <span className="tabular-nums font-semibold text-slate-700">
-                  {user.trustScore}/100
+      {/* Hero */}
+      <div className="relative mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-ink via-[#1c2f5e] to-[#0A1E5B] p-8 text-white shadow-lg">
+        <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-amber/10 blur-3xl" />
+        <div className="absolute -bottom-10 -left-20 w-72 h-72 rounded-full bg-[#4DB8D6]/10 blur-3xl" />
+        <div className="relative flex flex-wrap items-start gap-6">
+          <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-amber to-orange-500 text-white flex items-center justify-center text-4xl font-bold shadow-xl">
+            {(user.name || user.phone || '?').slice(0, 1).toUpperCase()}
+          </div>
+          <div className="flex-1 min-w-[220px]">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-3xl font-bold">{user.name || 'Sans nom'}</h1>
+              {user.role !== 'user' ? (
+                <span className="px-2 py-0.5 rounded-full bg-amber/20 text-amber-200 text-xs font-semibold">
+                  {user.role}
                 </span>
-              </div>
-              <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-                <div
-                  className={`h-full ${
-                    user.trustScore >= 70
-                      ? 'bg-emerald-500'
-                      : user.trustScore >= 40
-                        ? 'bg-amber'
-                        : 'bg-rose-500'
-                  }`}
-                  style={{ width: `${user.trustScore}%` }}
-                />
-              </div>
+              ) : null}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/80">
+              <span className="font-mono">{user.phone}</span>
+              {user.email ? <span>✉ {user.email}</span> : null}
+              {user.city ? <span>📍 {user.city}</span> : null}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <HeroBadge on={user.phoneVerified}>
+                {user.phoneVerified ? 'Tél. vérifié' : 'Tél. non vérifié'}
+              </HeroBadge>
+              <HeroBadge on={user.emailVerified}>
+                {user.emailVerified ? 'Email vérifié' : 'Email non vérifié'}
+              </HeroBadge>
+              <HeroBadge on={user.kycLevel >= 1}>KYC niveau {user.kycLevel}</HeroBadge>
+              {user.hasPin ? <HeroBadge on>PIN configuré</HeroBadge> : null}
+              {user.hasBiometric ? <HeroBadge on>Biométrie</HeroBadge> : null}
             </div>
           </div>
-        </Card>
-
-        {/* Stats agrégées */}
-        <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatTile label="Annonces totales" value={listings.length} />
-          <StatTile label="Publiées" value={activeCount} tone="success" />
-          <StatTile label="En attente" value={pendingCount} tone="warn" />
-          <StatTile label="Vues totales" value={totalViews} />
-          <StatTile
-            label="Contacts générés"
-            value={totalContacts}
-            subtitle="Tap WhatsApp / Contacter"
-          />
-          <StatTile
-            label="Conversion"
-            value={totalViews > 0 ? `${((totalContacts / totalViews) * 100).toFixed(1)}%` : '—'}
-            subtitle="Contacts / Vues"
-          />
-          <StatTile label="Identifiant" value={user.id.slice(0, 8) + '…'} mono />
-          <StatTile
-            label="Rôle"
-            value={user.role}
-            tone={user.role === 'admin' ? 'warn' : 'neutral'}
-          />
+          <div className="min-w-[220px]">
+            <div className="text-xs uppercase tracking-wider text-white/60 mb-1">Trust score</div>
+            <div className="flex items-end gap-2">
+              <div className="text-4xl font-bold tabular-nums">{user.trustScore}</div>
+              <div className="text-sm text-white/60 mb-1">/ 100</div>
+            </div>
+            <div className="mt-2 h-2 w-full bg-white/10 rounded-full overflow-hidden">
+              <div
+                className={`h-full ${
+                  user.trustScore >= 70
+                    ? 'bg-emerald-400'
+                    : user.trustScore >= 40
+                      ? 'bg-amber'
+                      : 'bg-rose-400'
+                }`}
+                style={{ width: `${user.trustScore}%` }}
+              />
+            </div>
+            <div className="mt-3 text-xs text-white/50">
+              Inscrit le {formatDate(user.createdAt)}
+            </div>
+            <div className="text-xs text-white/40 font-mono mt-1 truncate">ID {user.id}</div>
+          </div>
         </div>
       </div>
 
-      {/* Liste des annonces du user */}
+      {/* KPI row */}
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+        <Kpi label="Annonces" value={listings.length} icon="📊" />
+        <Kpi label="Publiées" value={activeCount} tone="success" icon="✓" />
+        <Kpi label="En attente" value={pendingCount} tone="warn" icon="⏱" />
+        <Kpi label="Refusées" value={rejectedCount} tone={rejectedCount > 0 ? 'danger' : 'neutral'} icon="✕" />
+        <Kpi label="Vues" value={totalViews} icon="👁" />
+        <Kpi
+          label="Conv."
+          value={totalViews > 0 ? `${((totalContacts / totalViews) * 100).toFixed(0)}%` : '—'}
+          icon="💬"
+          subtitle={`${totalContacts} contacts`}
+        />
+      </div>
+
+      {/* Annonces */}
       <Card>
-        <div className="px-5 py-3 border-b border-slate-100">
-          <h3 className="font-semibold">
-            Annonces publiées ({listings.length})
-            {pendingCount > 0 ? (
-              <span className="ml-2 text-xs text-amber-700 font-normal">
-                · {pendingCount} à modérer
-              </span>
-            ) : null}
-          </h3>
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-bold">Annonces publiées</h3>
+            <div className="text-xs text-slate-500 mt-0.5">
+              {listings.length} au total
+              {pendingCount > 0 ? ` · ${pendingCount} à modérer` : ''}
+              {soldCount > 0 ? ` · ${soldCount} vendues` : ''}
+            </div>
+          </div>
         </div>
         {listings.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 text-sm">
-            Cet utilisateur n'a publié aucune annonce.
+          <div className="p-12 text-center text-slate-400 text-sm">
+            <div className="text-4xl mb-2">📭</div>
+            Cet utilisateur n&apos;a publié aucune annonce.
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
-              <tr>
-                <th className="px-5 py-3 text-left">Véhicule</th>
-                <th className="px-5 py-3 text-right">Prix</th>
-                <th className="px-5 py-3 text-right">Km</th>
-                <th className="px-5 py-3 text-left">Ville</th>
-                <th className="px-5 py-3 text-center">Photos</th>
-                <th className="px-5 py-3 text-right">Vues</th>
-                <th className="px-5 py-3 text-right">Contacts</th>
-                <th className="px-5 py-3 text-center">Statut</th>
-                <th className="px-5 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {listings.map((l) => (
-                <tr key={l.id} className={l.status === 'pending' ? 'bg-amber-50/40' : ''}>
-                  <td className="px-5 py-3">
-                    <div className="font-medium">
-                      {l.brand} {l.model}
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      {l.year} · {l.fuel} · {l.transmission}
-                    </div>
-                  </td>
-                  <td className="px-5 py-3 text-right font-mono">
-                    {l.priceMru.toLocaleString('fr-FR')}
-                  </td>
-                  <td className="px-5 py-3 text-right">{l.km.toLocaleString('fr-FR')}</td>
-                  <td className="px-5 py-3">{l.city}</td>
-                  <td className="px-5 py-3 text-center">{l.photos}</td>
-                  <td className="px-5 py-3 text-right tabular-nums">{l.viewCount ?? 0}</td>
-                  <td className="px-5 py-3 text-right tabular-nums">
-                    {l.contactCount ?? 0}
-                  </td>
-                  <td className="px-5 py-3 text-center">
-                    <Badge tone={statusTone(l.status)}>
-                      {STATUS_LABEL[l.status] ?? l.status}
-                    </Badge>
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      {l.status === 'pending' ? (
-                        <>
+          <div className="divide-y divide-slate-100">
+            {listings.map((l) => {
+              const photos = l.photoUrls ?? [];
+              const mainPhoto = photos[0];
+              const isExpanded = expandedListing === l.id;
+              return (
+                <div key={l.id} className="p-5">
+                  <div className="flex gap-4">
+                    {/* Thumbnail */}
+                    <button
+                      onClick={() => mainPhoto && setLightbox({ photos, idx: 0 })}
+                      className="flex-shrink-0 w-32 h-32 rounded-xl overflow-hidden bg-slate-100 relative group"
+                    >
+                      {mainPhoto ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={mainPhoto}
+                          alt={`${l.brand} ${l.model}`}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-3xl text-slate-300">
+                          🚗
+                        </div>
+                      )}
+                      {photos.length > 1 ? (
+                        <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded-md bg-black/60 text-white text-[10px] font-semibold">
+                          +{photos.length - 1}
+                        </div>
+                      ) : null}
+                    </button>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-lg font-bold text-ink">
+                            {l.brand} {l.model}
+                          </div>
+                          <div className="text-xs text-slate-500 mt-0.5 flex flex-wrap gap-x-2">
+                            <span>{l.year}</span>
+                            <span>·</span>
+                            <span>{l.fuel}</span>
+                            <span>·</span>
+                            <span>{l.transmission}</span>
+                            <span>·</span>
+                            <span>{l.km.toLocaleString('fr-FR')} km</span>
+                          </div>
+                          <div className="text-xs text-slate-500 mt-0.5">
+                            📍 {l.city}
+                            {l.district ? ` · ${l.district}` : ''}
+                            {l.importYear ? ` · Dédouanée ${l.importYear}` : ''}
+                            {typeof l.ownersInCountry === 'number'
+                              ? ` · ${l.ownersInCountry} main${l.ownersInCountry > 1 ? 's' : ''}`
+                              : ''}
+                          </div>
+                        </div>
+                        <Badge tone={statusTone(l.status)}>
+                          {STATUS_LABEL[l.status] ?? l.status}
+                        </Badge>
+                      </div>
+
+                      <div className="mt-3 flex items-end justify-between gap-3">
+                        <div>
+                          <div className="text-2xl font-bold text-amber tabular-nums">
+                            {formatMRU(l.priceMru)}{' '}
+                            <span className="text-xs font-medium text-slate-500">MRU</span>
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1 flex gap-4">
+                            <span>👁 {l.viewCount ?? 0}</span>
+                            <span>💬 {l.contactCount ?? 0}</span>
+                            <span>📸 {l.photos}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-wrap justify-end">
+                          {l.status === 'pending' ? (
+                            <>
+                              <button
+                                disabled={busyId === l.id}
+                                onClick={() => changeStatus(l.id, 'active')}
+                                className="text-xs px-3 py-1.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 font-semibold"
+                              >
+                                ✓ Approuver
+                              </button>
+                              <button
+                                disabled={busyId === l.id}
+                                onClick={() => changeStatus(l.id, 'rejected')}
+                                className="text-xs px-3 py-1.5 rounded-md bg-rose-100 text-rose-700 hover:bg-rose-200 disabled:opacity-50 font-semibold"
+                              >
+                                ✕ Refuser
+                              </button>
+                            </>
+                          ) : l.status === 'active' ? (
+                            <button
+                              disabled={busyId === l.id}
+                              onClick={() => changeStatus(l.id, 'pending')}
+                              className="text-xs px-3 py-1.5 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50 font-semibold"
+                            >
+                              Dépublier
+                            </button>
+                          ) : l.status === 'rejected' ? (
+                            <button
+                              disabled={busyId === l.id}
+                              onClick={() => changeStatus(l.id, 'pending')}
+                              className="text-xs px-3 py-1.5 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50 font-semibold"
+                            >
+                              ↻ Remettre en modération
+                            </button>
+                          ) : null}
                           <button
-                            disabled={busyId === l.id}
-                            onClick={() => changeStatus(l.id, 'active')}
-                            className="text-xs px-2 py-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 font-semibold"
+                            onClick={() => setExpandedListing(isExpanded ? null : l.id)}
+                            className="text-xs px-3 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold"
                           >
-                            Publier
+                            {isExpanded ? 'Réduire' : 'Détails'}
                           </button>
-                          <button
-                            disabled={busyId === l.id}
-                            onClick={() => changeStatus(l.id, 'rejected')}
-                            className="text-xs px-2 py-1 rounded-md bg-rose-100 text-rose-700 hover:bg-rose-200 disabled:opacity-50 font-semibold"
+                          <Link
+                            href={`/listings/${l.id}/viewers`}
+                            className="text-xs px-3 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold"
                           >
-                            Refuser
-                          </button>
-                        </>
-                      ) : l.status === 'active' ? (
-                        <button
-                          disabled={busyId === l.id}
-                          onClick={() => changeStatus(l.id, 'pending')}
-                          className="text-xs px-2 py-1 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50 font-semibold"
-                        >
-                          Dépublier
-                        </button>
+                            Qui a vu →
+                          </Link>
+                        </div>
+                      </div>
+
+                      {/* Gallery expanded */}
+                      {isExpanded && photos.length > 0 ? (
+                        <div className="mt-4 grid grid-cols-4 md:grid-cols-6 gap-2">
+                          {photos.map((url, i) => (
+                            <button
+                              key={i}
+                              onClick={() => setLightbox({ photos, idx: i })}
+                              className="aspect-square rounded-lg overflow-hidden bg-slate-100 group"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={url}
+                                alt={`Photo ${i + 1}`}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+
+                      {isExpanded ? (
+                        <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                          <Detail label="Type vendeur" value={l.sellerType === 'pro' ? 'Pro' : 'Particulier'} />
+                          <Detail label="Nom affiché" value={l.sellerName} />
+                          <Detail label="Kargo Verified" value={l.kargoVerified ? 'Oui' : 'Non'} />
+                          <Detail label="VIN vérifié" value={l.vinVerified ? 'Oui' : 'Non'} />
+                          <Detail label="Publié le" value={formatDate(l.publishedAt)} />
+                          <Detail label="Listing ID" value={l.id.slice(0, 8) + '…'} mono />
+                        </div>
                       ) : null}
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </Card>
 
-      {/* Journal d'activité */}
-      <Card>
-        <div className="px-5 py-3 border-b border-slate-100">
-          <h3 className="font-semibold">
-            Journal d'activité
-            <span className="ml-2 text-xs text-slate-500 font-normal">
-              · {activity.length} événement{activity.length > 1 ? 's' : ''} récent
+      {/* Activité + Vues */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <Card>
+          <div className="px-6 py-4 border-b border-slate-100">
+            <h3 className="font-bold">Journal d&apos;activité</h3>
+            <div className="text-xs text-slate-500 mt-0.5">
+              {activity.length} événement{activity.length > 1 ? 's' : ''} récent
               {activity.length > 1 ? 's' : ''}
-            </span>
-          </h3>
-        </div>
-        {activity.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 text-sm">
-            Aucune activité enregistrée pour cet utilisateur (logs créés depuis le déploiement du journal).
+            </div>
           </div>
-        ) : (
-          <ul className="divide-y divide-slate-100">
-            {activity.map((a) => (
-              <li key={a.id} className="px-5 py-3 flex items-start gap-3">
-                <span
-                  className={`mt-0.5 text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full ${activityTypeColor(a.type)}`}
-                >
-                  {activityTypeLabel(a.type)}
-                </span>
-                <div className="flex-1">
-                  <div className="text-sm">{a.summary ?? '—'}</div>
-                  {a.metadataJson ? (
-                    <div className="text-[11px] text-slate-400 font-mono mt-0.5 truncate max-w-xl">
-                      {a.metadataJson}
+          {activity.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-sm">
+              Aucune activité enregistrée.
+            </div>
+          ) : (
+            <ul className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
+              {activity.map((a) => (
+                <li key={a.id} className="px-6 py-3 flex items-start gap-3">
+                  <span
+                    className={`mt-0.5 text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${activityTypeColor(
+                      a.type,
+                    )}`}
+                  >
+                    {activityTypeLabel(a.type)}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm">{a.summary ?? '—'}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">
+                      {formatDate(a.createdAt)}
                     </div>
-                  ) : null}
-                </div>
-                <div className="text-xs text-slate-500 whitespace-nowrap">
-                  {formatDate(a.createdAt)}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
-
-      {/* Annonces consultées */}
-      <Card>
-        <div className="px-5 py-3 border-b border-slate-100">
-          <h3 className="font-semibold">
-            Annonces consultées
-            <span className="ml-2 text-xs text-slate-500 font-normal">
-              · {viewsGiven.length} vue{viewsGiven.length > 1 ? 's' : ''}
-            </span>
-          </h3>
-        </div>
-        {viewsGiven.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 text-sm">
-            Cet utilisateur n'a ouvert aucune fiche annonce.
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
-              <tr>
-                <th className="px-5 py-2 text-left">Annonce</th>
-                <th className="px-5 py-2 text-left">Ville</th>
-                <th className="px-5 py-2 text-right">Prix</th>
-                <th className="px-5 py-2 text-left">Vue le</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {viewsGiven.map((v, i) => (
-                <tr key={`${v.listingId}-${i}`}>
-                  <td className="px-5 py-2">
-                    <div className="font-medium">{v.listingLabel}</div>
-                    <div className="text-xs text-slate-500">{v.year}</div>
-                  </td>
-                  <td className="px-5 py-2">{v.city}</td>
-                  <td className="px-5 py-2 text-right font-mono">
-                    {v.priceMru.toLocaleString('fr-FR')} MRU
-                  </td>
-                  <td className="px-5 py-2 text-xs text-slate-500">
-                    {formatDate(v.viewedAt)}
-                  </td>
-                  <td className="px-5 py-2 text-right">
-                    <Link
-                      href={`/listings/${v.listingId}/viewers`}
-                      className="text-xs text-amber hover:underline"
-                    >
-                      Voir →
-                    </Link>
-                  </td>
-                </tr>
+                  </div>
+                </li>
               ))}
-            </tbody>
-          </table>
-        )}
-      </Card>
+            </ul>
+          )}
+        </Card>
+
+        <Card>
+          <div className="px-6 py-4 border-b border-slate-100">
+            <h3 className="font-bold">Annonces consultées</h3>
+            <div className="text-xs text-slate-500 mt-0.5">
+              {viewsGiven.length} vue{viewsGiven.length > 1 ? 's' : ''}
+            </div>
+          </div>
+          {viewsGiven.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-sm">
+              Cet utilisateur n&apos;a ouvert aucune fiche.
+            </div>
+          ) : (
+            <ul className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
+              {viewsGiven.map((v, i) => (
+                <li key={`${v.listingId}-${i}`} className="px-6 py-3 flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm">{v.listingLabel}</div>
+                    <div className="text-xs text-slate-500">
+                      {v.year} · {v.city} · {formatDate(v.viewedAt)}
+                    </div>
+                  </div>
+                  <div className="text-sm font-mono font-semibold text-amber">
+                    {formatMRU(v.priceMru)}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
+
+      {/* Lightbox */}
+      {lightbox ? (
+        <div
+          onClick={() => setLightbox(null)}
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lightbox.photos[lightbox.idx]}
+            alt=""
+            className="max-w-full max-h-full rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          {lightbox.photos.length > 1 ? (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightbox({
+                    photos: lightbox.photos,
+                    idx: (lightbox.idx - 1 + lightbox.photos.length) % lightbox.photos.length,
+                  });
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl"
+              >
+                ‹
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightbox({
+                    photos: lightbox.photos,
+                    idx: (lightbox.idx + 1) % lightbox.photos.length,
+                  });
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl"
+              >
+                ›
+              </button>
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-white/10 text-white text-xs">
+                {lightbox.idx + 1} / {lightbox.photos.length}
+              </div>
+            </>
+          ) : null}
+          <button
+            onClick={() => setLightbox(null)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl"
+          >
+            ✕
+          </button>
+        </div>
+      ) : null}
     </>
+  );
+}
+
+function HeroBadge({ children, on }: { children: React.ReactNode; on: boolean }) {
+  return (
+    <span
+      className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
+        on
+          ? 'bg-emerald-500/20 text-emerald-100 border-emerald-400/30'
+          : 'bg-white/5 text-white/50 border-white/10'
+      }`}
+    >
+      {on ? '✓ ' : ''}
+      {children}
+    </span>
+  );
+}
+
+function Kpi({
+  label,
+  value,
+  subtitle,
+  tone = 'neutral',
+  icon,
+}: {
+  label: string;
+  value: string | number;
+  subtitle?: string;
+  tone?: 'success' | 'warn' | 'danger' | 'neutral';
+  icon?: string;
+}) {
+  const border =
+    tone === 'success'
+      ? 'border-l-emerald-500'
+      : tone === 'warn'
+        ? 'border-l-amber'
+        : tone === 'danger'
+          ? 'border-l-rose-500'
+          : 'border-l-slate-300';
+  const valueColor =
+    tone === 'success'
+      ? 'text-emerald-700'
+      : tone === 'warn'
+        ? 'text-amber-700'
+        : tone === 'danger'
+          ? 'text-rose-700'
+          : 'text-ink';
+  return (
+    <div className={`bg-white rounded-xl border border-slate-100 border-l-4 ${border} p-4 shadow-sm`}>
+      <div className="flex items-center justify-between mb-1">
+        <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+          {label}
+        </div>
+        {icon ? <span className="text-sm">{icon}</span> : null}
+      </div>
+      <div className={`text-2xl font-bold tabular-nums ${valueColor}`}>{value}</div>
+      {subtitle ? <div className="text-xs text-slate-500 mt-0.5">{subtitle}</div> : null}
+    </div>
+  );
+}
+
+function Detail({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
+        {label}
+      </div>
+      <div className={`text-sm mt-0.5 ${mono ? 'font-mono' : ''}`}>{value}</div>
+    </div>
   );
 }
 
@@ -432,44 +613,4 @@ function activityTypeColor(type: string): string {
     default:
       return 'bg-slate-100 text-slate-600';
   }
-}
-
-function StatTile({
-  label,
-  value,
-  subtitle,
-  tone,
-  mono,
-}: {
-  label: string;
-  value: string | number;
-  subtitle?: string;
-  tone?: 'success' | 'warn' | 'danger' | 'neutral';
-  mono?: boolean;
-}) {
-  const toneColor =
-    tone === 'success'
-      ? 'text-emerald-700'
-      : tone === 'warn'
-        ? 'text-amber-700'
-        : tone === 'danger'
-          ? 'text-rose-700'
-          : 'text-slate-800';
-  return (
-    <Card>
-      <div className="p-4">
-        <div className="text-xs uppercase tracking-wider text-slate-500">{label}</div>
-        <div
-          className={`mt-1 text-2xl font-bold tabular-nums ${toneColor} ${
-            mono ? 'font-mono text-base' : ''
-          }`}
-        >
-          {value}
-        </div>
-        {subtitle ? (
-          <div className="text-xs text-slate-500 mt-0.5">{subtitle}</div>
-        ) : null}
-      </div>
-    </Card>
-  );
 }

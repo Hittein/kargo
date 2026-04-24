@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Badge, Card, PageHeader } from '@/components/Page';
 import { apiGet, type ApiAdminUserRow } from '@/lib/api';
 
@@ -23,6 +24,7 @@ function formatDate(iso: string) {
 }
 
 export default function UsersPage() {
+  const router = useRouter();
   const [rows, setRows] = useState<ApiAdminUserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -143,14 +145,16 @@ export default function UsersPage() {
               <th className="px-5 py-3 text-right">Vues</th>
               <th className="px-5 py-3 text-right">Contacts</th>
               <th className="px-5 py-3 text-left">Inscrit</th>
-              <th className="px-5 py-3 text-right" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filtered.map((r) => (
               <tr
                 key={r.user.id}
-                className={r.listingsPending > 0 ? 'bg-amber-50/40' : undefined}
+                onClick={() => router.push(`/users/${r.user.id}`)}
+                className={`cursor-pointer hover:bg-amber-50 transition-colors ${
+                  r.listingsPending > 0 ? 'bg-amber-50/40' : ''
+                }`}
               >
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-3">
@@ -209,19 +213,11 @@ export default function UsersPage() {
                 <td className="px-5 py-3 text-xs text-slate-500">
                   {formatDate(r.user.createdAt)}
                 </td>
-                <td className="px-5 py-3 text-right">
-                  <Link
-                    href={`/users/${r.user.id}`}
-                    className="text-xs font-semibold text-amber hover:underline"
-                  >
-                    Voir profil →
-                  </Link>
-                </td>
               </tr>
             ))}
             {filtered.length === 0 && !loading ? (
               <tr>
-                <td colSpan={9} className="px-5 py-8 text-center text-slate-500">
+                <td colSpan={8} className="px-5 py-8 text-center text-slate-500">
                   Aucun utilisateur correspondant.
                 </td>
               </tr>

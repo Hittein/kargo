@@ -35,11 +35,13 @@ export default function MyListings() {
   const params = useLocalSearchParams<{ tab?: string }>();
   const initialTab: Tab = (params.tab as Tab) in TAB_STATUS ? (params.tab as Tab) : 'active';
   const [tab, setTab] = useState<Tab>(initialTab);
+  const [userPickedTab, setUserPickedTab] = useState(false);
   const { data: listings = MY_LISTINGS, isFetching, refetch } = useMyListings();
 
   useEffect(() => {
     if (params.tab && (params.tab as Tab) in TAB_STATUS) {
       setTab(params.tab as Tab);
+      setUserPickedTab(true);
     }
   }, [params.tab]);
 
@@ -54,6 +56,17 @@ export default function MyListings() {
     for (const l of listings) c[l.status]++;
     return c;
   }, [listings]);
+
+  // Auto-switch vers le premier onglet non-vide si l'user n'a pas choisi et
+  // que l'onglet courant est vide — évite qu'une annonce fraîchement publiée
+  // (status=moderation) soit invisible parce qu'on est sur l'onglet "Actives".
+  useEffect(() => {
+    if (userPickedTab) return;
+    if (counts[TAB_STATUS[tab]] > 0) return;
+    const priority: Tab[] = ['moderation', 'active', 'rejected', 'sold', 'draft'];
+    const next = priority.find((t) => counts[TAB_STATUS[t]] > 0);
+    if (next && next !== tab) setTab(next);
+  }, [counts, tab, userPickedTab]);
 
   const list = useMemo(
     () => listings.filter((l) => l.status === TAB_STATUS[tab]),
@@ -116,7 +129,10 @@ export default function MyListings() {
               label={`${t.label} · ${t.count}`}
               active={tab === t.key}
               tone="primary"
-              onPress={() => setTab(t.key)}
+              onPress={() => {
+                setTab(t.key);
+                setUserPickedTab(true);
+              }}
             />
           ))}
         </ScrollView>
