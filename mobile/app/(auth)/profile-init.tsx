@@ -40,7 +40,7 @@ export default function ProfileInitScreen() {
         label="Prénom"
         value={name}
         onChangeText={setName}
-        placeholder="Aminetou"
+        placeholder="Votre prénom"
         autoCapitalize="words"
       />
       <Input

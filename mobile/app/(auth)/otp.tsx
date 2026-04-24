@@ -106,6 +106,9 @@ export default function OtpScreen() {
       <Text variant="bodyM" tone="secondary">
         {t('auth.otpHint', { phone: pending.phone })}
       </Text>
+      <Text variant="caption" tone="secondary" style={{ marginTop: 4 }}>
+        Mode démo — code simulé : <Text variant="caption" weight="bold">{pending.code}</Text> (ou 0000 / 000000)
+      </Text>
       <Input
         keyboardType="number-pad"
         placeholder="••••••"
@@ -124,6 +127,7 @@ export default function OtpScreen() {
         onPress={submit}
         disabled={code.length < 4 || loading}
       />
+      <Button label="Utiliser 000000" variant="ghost" fullWidth onPress={() => setCode('000000')} />
       <Button label={t('auth.resendOtp')} variant="ghost" fullWidth onPress={resend} />
     </Screen>
   );

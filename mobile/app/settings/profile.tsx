@@ -87,7 +87,7 @@ export default function SettingsProfile() {
               )}
             </View>
           </View>
-          <Input label="Prénom et nom" value={name} onChangeText={setName} placeholder="Aminetou" />
+          <Input label="Prénom et nom" value={name} onChangeText={setName} placeholder="Votre prénom" />
           <Input
             label="Email"
             value={email}

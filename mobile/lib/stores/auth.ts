@@ -86,8 +86,12 @@ export const useAuthStore = create<State>()(
         }
         const now = new Date().toISOString();
         const existing = get().user;
-        const user: AuthUser = existing
-          ? { ...existing, phone: pendingOtp.phone, phoneVerified: true }
+        // Si le user existant a le même phone, on conserve son profil ; sinon
+        // c'est une nouvelle inscription : on part sur un user vierge pour
+        // éviter de récupérer un "name" fantôme d'une session précédente.
+        const keepExisting = existing && existing.phone === pendingOtp.phone;
+        const user: AuthUser = keepExisting
+          ? { ...existing, phoneVerified: true }
           : {
               id: `usr_${Date.now()}`,
               phone: pendingOtp.phone,
