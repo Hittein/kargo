@@ -7,6 +7,7 @@ import com.kargo.api.repository.OtpChallengeRepository;
 import com.kargo.api.repository.UserRepository;
 import com.kargo.api.repository.WalletRepository;
 import com.kargo.api.security.JwtService;
+import com.kargo.api.util.PhoneUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -38,9 +39,11 @@ public class AuthService {
     }
 
     public StartResult start(String phone) {
+        String normalized = PhoneUtil.normalize(phone);
+        if (normalized == null) return new StartResult(null, null);
         String code = String.format("%06d", (int) (Math.random() * 1_000_000));
         OtpChallenge challenge = OtpChallenge.builder()
-                .phone(phone)
+                .phone(normalized)
                 .code(code)
                 .expiresAt(Instant.now().plus(5, ChronoUnit.MINUTES))
                 .build();
@@ -50,7 +53,9 @@ public class AuthService {
     }
 
     public VerifyResult verify(String phone, String code) {
-        Optional<OtpChallenge> latest = otpRepo.findFirstByPhoneAndConsumedFalseOrderByCreatedAtDesc(phone);
+        String normalized = PhoneUtil.normalize(phone);
+        if (normalized == null) return VerifyResult.invalid();
+        Optional<OtpChallenge> latest = otpRepo.findFirstByPhoneAndConsumedFalseOrderByCreatedAtDesc(normalized);
         if (latest.isEmpty()) return VerifyResult.invalid();
         OtpChallenge challenge = latest.get();
         if (Instant.now().isAfter(challenge.getExpiresAt())) return VerifyResult.expired();
@@ -65,9 +70,9 @@ public class AuthService {
         challenge.setConsumed(true);
         otpRepo.save(challenge);
 
-        User user = userRepo.findByPhone(phone).orElseGet(() -> {
+        User user = userRepo.findByPhone(normalized).orElseGet(() -> {
             User created = userRepo.save(User.builder()
-                    .phone(phone)
+                    .phone(normalized)
                     .name("")
                     .phoneVerified(true)
                     .build());

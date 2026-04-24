@@ -15,12 +15,17 @@ import com.kargo.api.repository.ListingViewRepository;
 import com.kargo.api.repository.RentalListingRepository;
 import com.kargo.api.repository.UserActivityRepository;
 import com.kargo.api.repository.UserRepository;
+import com.kargo.api.service.UserMergeService;
+import com.kargo.api.util.PhoneUtil;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -39,6 +44,7 @@ public class AdminController {
     private final UserRepository users;
     private final ListingViewRepository listingViews;
     private final UserActivityRepository activities;
+    private final UserMergeService mergeService;
     private final ObjectMapper mapper = new ObjectMapper();
 
     public AdminController(
@@ -46,13 +52,15 @@ public class AdminController {
             RentalListingRepository rentals,
             UserRepository users,
             ListingViewRepository listingViews,
-            UserActivityRepository activities
+            UserActivityRepository activities,
+            UserMergeService mergeService
     ) {
         this.listings = listings;
         this.rentals = rentals;
         this.users = users;
         this.listingViews = listingViews;
         this.activities = activities;
+        this.mergeService = mergeService;
     }
 
     // -------------------- LISTINGS --------------------
@@ -275,6 +283,58 @@ public class AdminController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // -------------------- DUPLICATES / MERGE --------------------
+
+    /** Détecte les comptes doublons : users dont le phone se normalise vers la même valeur. */
+    @GetMapping("/users/duplicates")
+    public List<DuplicateGroup> duplicates() {
+        Map<String, List<User>> byNorm = new LinkedHashMap<>();
+        for (User u : users.findAll()) {
+            String norm = PhoneUtil.normalize(u.getPhone());
+            if (norm == null) continue;
+            byNorm.computeIfAbsent(norm, k -> new ArrayList<>()).add(u);
+        }
+        List<DuplicateGroup> out = new ArrayList<>();
+        for (var entry : byNorm.entrySet()) {
+            List<User> group = entry.getValue();
+            if (group.size() < 2) continue;
+            // Ordre : le user avec le plus d'annonces d'abord, puis le plus ancien.
+            group.sort(Comparator
+                    .<User>comparingInt(u -> -listings.findBySellerOrderByPublishedAtDesc(u).size())
+                    .thenComparing(User::getCreatedAt));
+            List<DuplicateUser> rows = group.stream().map(u -> new DuplicateUser(
+                    UserDto.of(u),
+                    listings.findBySellerOrderByPublishedAtDesc(u).size()
+            )).toList();
+            out.add(new DuplicateGroup(entry.getKey(), rows));
+        }
+        return out;
+    }
+
+    /**
+     * Fusionne deux users. Body: { "primaryId": "uuid", "secondaryId": "uuid" }.
+     * Toutes les données de secondary sont ré-attachées à primary, puis secondary
+     * est supprimé. Opération non réversible.
+     */
+    @PostMapping("/users/merge")
+    public ResponseEntity<?> mergeUsers(@RequestBody Map<String, String> body) {
+        String primaryId = body.get("primaryId");
+        String secondaryId = body.get("secondaryId");
+        if (primaryId == null || secondaryId == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "ids_required"));
+        }
+        if (primaryId.equals(secondaryId)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "same_user"));
+        }
+        User primary = users.findById(UUID.fromString(primaryId)).orElse(null);
+        User secondary = users.findById(UUID.fromString(secondaryId)).orElse(null);
+        if (primary == null || secondary == null) {
+            return ResponseEntity.status(404).body(Map.of("error", "user_not_found"));
+        }
+        UserMergeService.MergeResult res = mergeService.merge(primary, secondary);
+        return ResponseEntity.ok(res);
+    }
+
     // -------------------- Helpers --------------------
 
     private List<String> parseUrls(Listing l) {
@@ -334,4 +394,8 @@ public class AdminController {
             long priceMru,
             Instant viewedAt
     ) {}
+
+    public record DuplicateGroup(String normalizedPhone, List<DuplicateUser> users) {}
+
+    public record DuplicateUser(UserDto user, int listingsCount) {}
 }
