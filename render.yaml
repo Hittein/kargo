@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: kargo-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kargo-db
+          property: connectionString
+      # Generated once on first deploy. Never commit a real secret here.
+      # To rotate: flip `sync: false` then set the value via the Render dashboard.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://kargo-admin.onrender.com
+      - key: H2_CONSOLE_ENABLED
+        value: "false"
+      - key: OTP_SIMULATE
+        value: "true"
+      - key: JWT_ACCESS_EXPIRATION
+        value: "3600000"
+
+  - type: web
+    name: kargo-admin
+    runtime: node
+    rootDir: admin
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+
+databases:
+  - name: kargo-db
+    plan: free
+    databaseName: kargo
+    user: kargo

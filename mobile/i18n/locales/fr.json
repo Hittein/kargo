@@ -1,0 +1,109 @@
+{
+  "app": {
+    "name": "Kargo",
+    "tagline": "Acheter, louer, voyager — en un seul geste."
+  },
+  "common": {
+    "continue": "Continuer",
+    "next": "Suivant",
+    "back": "Retour",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "search": "Rechercher",
+    "loading": "Chargement…",
+    "error": "Une erreur est survenue",
+    "retry": "Réessayer",
+    "skip": "Passer",
+    "done": "Terminé",
+    "close": "Fermer",
+    "yes": "Oui",
+    "no": "Non",
+    "currency": "MRU"
+  },
+  "tabs": {
+    "home": "Accueil",
+    "explore": "Explorer",
+    "tickets": "Mes billets",
+    "messages": "Messages",
+    "profile": "Profil"
+  },
+  "modules": {
+    "marketplace": "Marketplace",
+    "rental": "Location",
+    "transit": "Trajet",
+    "wallet": "Wallet",
+    "trust": "Trust"
+  },
+  "home": {
+    "greeting": "Bonjour, {{name}}",
+    "searchPlaceholder": "Rechercher une voiture…",
+    "suggestions": "Suggestions pour vous",
+    "actions": {
+      "buy": "Achat",
+      "rent": "Location",
+      "trip": "Trajet"
+    }
+  },
+  "auth": {
+    "welcome": "Bienvenue sur Kargo",
+    "phoneLabel": "Numéro de téléphone",
+    "continueWithPhone": "Continuer avec le téléphone",
+    "continueWithGoogle": "Continuer avec Google",
+    "continueWithApple": "Continuer avec Apple",
+    "otpTitle": "Entrez le code",
+    "otpHint": "Code envoyé au {{phone}}",
+    "resendOtp": "Renvoyer le code"
+  },
+  "settings": {
+    "language": "Langue",
+    "languageFr": "Français",
+    "languageAr": "العربية"
+  },
+  "marketplace": {
+    "title": "Achat véhicule",
+    "searchPlaceholder": "Marque, modèle, ville…",
+    "filters": "Filtres",
+    "reset": "Réinitialiser",
+    "empty": "Aucun résultat",
+    "emptyHint": "Ajustez vos filtres ou créez une alerte marché."
+  },
+  "transit": {
+    "whereTo": "Où allez-vous ?",
+    "departure": "Départ",
+    "destination": "Destination",
+    "date": "Date",
+    "passengers": "Passagers",
+    "today": "Aujourd'hui",
+    "tomorrow": "Demain",
+    "search": "Rechercher",
+    "recent": "Recherches récentes",
+    "direct": "Direct",
+    "morning": "Matin",
+    "afternoon": "Après-midi",
+    "empty": "Aucun trajet disponible",
+    "emptyHint": "Essayez une autre date ou relâchez les filtres.",
+    "chooseSeat": "Choisir ma place",
+    "perPassenger": "Prix par passager"
+  },
+  "wallet": {
+    "title": "Mon portefeuille",
+    "balanceAvailable": "Solde disponible",
+    "topup": "Recharger",
+    "transfer": "Envoyer",
+    "pay": "Payer",
+    "withdraw": "Retirer",
+    "recentTransactions": "Transactions récentes",
+    "viewAll": "Tout voir",
+    "filterAll": "Toutes",
+    "filterIn": "Entrées",
+    "filterOut": "Sorties",
+    "inflowMonth": "Entrées · ce mois",
+    "outflowMonth": "Sorties · ce mois",
+    "points": "Kargo Points",
+    "pointsToNext": "Plus que {{count}} pts pour {{tier}}",
+    "maxTier": "Palier maximum atteint"
+  }
+}

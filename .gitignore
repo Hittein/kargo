@@ -1,0 +1,46 @@
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+*.log
+npm-debug.log*
+
+# Expo / mobile
+mobile/.expo/
+mobile/.expo-shared/
+mobile/dist/
+mobile/web-build/
+mobile/ios/
+mobile/android/
+*.jks
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Admin (Next.js)
+admin/.next/
+admin/out/
+
+# Backend (Spring/Maven)
+backend/target/
+backend/.mvn/
+backend/.idea/
+backend/*.iml
+backend/dependency-reduced-pom.xml
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Env
+.env
+.env.local
+.env.production
+*.env
+
+# Secrets
+google-services.json
+GoogleService-Info.plist

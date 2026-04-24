@@ -1,0 +1,111 @@
+{
+  "app": {
+    "name": "كارغو",
+    "tagline": "اشترِ، استأجر، سافر — بحركة واحدة."
+  },
+  "common": {
+    "continue": "متابعة",
+    "next": "التالي",
+    "back": "رجوع",
+    "cancel": "إلغاء",
+    "confirm": "تأكيد",
+    "save": "حفظ",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "search": "بحث",
+    "loading": "جارٍ التحميل…",
+    "error": "حدث خطأ",
+    "retry": "إعادة المحاولة",
+    "skip": "تخطي",
+    "done": "تم",
+    "close": "إغلاق",
+    "yes": "نعم",
+    "no": "لا",
+    "currency": "أوقية"
+  },
+  "tabs": {
+    "home": "الرئيسية",
+    "explore": "استكشاف",
+    "tickets": "تذاكري",
+    "messages": "الرسائل",
+    "profile": "الملف"
+  },
+  "modules": {
+    "marketplace": "السوق",
+    "rental": "الإيجار",
+    "transit": "الرحلة",
+    "wallet": "المحفظة",
+    "trust": "الثقة"
+  },
+  "home": {
+    "greeting": "مرحباً، {{name}}",
+    "searchPlaceholder": "ابحث عن سيارة…",
+    "suggestions": "اقتراحات لك",
+    "actions": {
+      "buy": "شراء",
+      "rent": "إيجار",
+      "trip": "رحلة"
+    }
+  },
+  "auth": {
+    "welcome": "مرحباً بك في كارغو",
+    "phoneLabel": "رقم الهاتف",
+    "continueWithPhone": "المتابعة بالهاتف",
+    "continueWithGoogle": "المتابعة بحساب Google",
+    "continueWithApple": "المتابعة بحساب Apple",
+    "otpTitle": "أدخل الرمز",
+    "otpHint": "تم إرسال الرمز إلى {{phone}}",
+    "resendOtp": "إعادة إرسال الرمز"
+  },
+  "settings": {
+    "language": "اللغة",
+    "languageFr": "Français",
+    "languageAr": "العربية"
+  },
+  "marketplace": {
+    "title": "شراء سيارة",
+    "searchPlaceholder": "ماركة، موديل، مدينة…",
+    "filters": "الفلاتر",
+    "reset": "إعادة ضبط",
+    "resultsCount_one": "{{count}} نتيجة",
+    "resultsCount_other": "{{count}} نتائج",
+    "empty": "لا توجد نتائج",
+    "emptyHint": "عدّل الفلاتر أو أنشئ تنبيهاً."
+  },
+  "transit": {
+    "whereTo": "إلى أين؟",
+    "departure": "الانطلاق",
+    "destination": "الوجهة",
+    "date": "التاريخ",
+    "passengers": "الركّاب",
+    "today": "اليوم",
+    "tomorrow": "غدًا",
+    "search": "بحث",
+    "recent": "عمليات البحث الأخيرة",
+    "direct": "مباشر",
+    "morning": "صباح",
+    "afternoon": "بعد الظهر",
+    "empty": "لا توجد رحلات متاحة",
+    "emptyHint": "جرّب تاريخًا آخر أو خفّف الفلاتر.",
+    "chooseSeat": "اختر مقعدي",
+    "perPassenger": "السعر لكل راكب"
+  },
+  "wallet": {
+    "title": "محفظتي",
+    "balanceAvailable": "الرصيد المتاح",
+    "topup": "شحن",
+    "transfer": "إرسال",
+    "pay": "دفع",
+    "withdraw": "سحب",
+    "recentTransactions": "آخر المعاملات",
+    "viewAll": "عرض الكل",
+    "filterAll": "الكل",
+    "filterIn": "واردة",
+    "filterOut": "صادرة",
+    "inflowMonth": "الواردة · هذا الشهر",
+    "outflowMonth": "الصادرة · هذا الشهر",
+    "points": "نقاط كارغو",
+    "pointsToNext": "تبقى {{count}} نقطة للوصول إلى {{tier}}",
+    "maxTier": "تم بلوغ المستوى الأقصى"
+  }
+}
