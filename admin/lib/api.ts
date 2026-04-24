@@ -51,6 +51,9 @@ export type ApiAdminUser = {
   hasBiometric: boolean;
   trustScore: number;
   role: string;
+  status?: 'active' | 'suspended' | 'pending_review';
+  suspendedAt?: string | null;
+  suspendReason?: string | null;
   createdAt: string;
 };
 

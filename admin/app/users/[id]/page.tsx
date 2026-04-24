@@ -121,6 +121,33 @@ export default function UserDetailPage() {
   const pendingCount = listings.filter((l) => l.status === 'pending').length;
   const rejectedCount = listings.filter((l) => l.status === 'rejected').length;
   const soldCount = listings.filter((l) => l.status === 'sold').length;
+  const isSuspended = user.status === 'suspended';
+
+  const toggleSuspension = async () => {
+    if (isSuspended) {
+      if (!confirm(`Réactiver le compte de ${user.name || user.phone} ?`)) return;
+      try {
+        await apiPatch(`/admin/users/${user.id}/status`, { status: 'active' });
+        await load();
+      } catch (e) {
+        alert(`Erreur: ${e instanceof Error ? e.message : 'status_failed'}`);
+      }
+      return;
+    }
+    const reason = prompt(
+      `Suspendre le compte de ${user.name || user.phone} ?\n\nMotif (visible par l'équipe, pas par l'user) :`,
+    );
+    if (reason === null) return;
+    try {
+      await apiPatch(`/admin/users/${user.id}/status`, {
+        status: 'suspended',
+        reason: reason || 'Non précisé',
+      });
+      await load();
+    } catch (e) {
+      alert(`Erreur: ${e instanceof Error ? e.message : 'status_failed'}`);
+    }
+  };
 
   return (
     <>
@@ -132,6 +159,26 @@ export default function UserDetailPage() {
           ← Tous les utilisateurs
         </Link>
       </div>
+
+      {/* Suspended banner */}
+      {isSuspended ? (
+        <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-5 py-3 flex items-center justify-between gap-4">
+          <div>
+            <div className="font-bold text-rose-800">🚫 Compte suspendu</div>
+            <div className="text-xs text-rose-700 mt-0.5">
+              Suspendu le {user.suspendedAt ? formatDate(user.suspendedAt) : '—'}
+              {user.suspendReason ? ` — Motif : ${user.suspendReason}` : ''}. L&apos;utilisateur
+              reçoit 403 sur toute requête authentifiée et sera déconnecté automatiquement.
+            </div>
+          </div>
+          <button
+            onClick={toggleSuspension}
+            className="flex-shrink-0 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm"
+          >
+            ✓ Réactiver le compte
+          </button>
+        </div>
+      ) : null}
 
       {/* Hero */}
       <div className="relative mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-ink via-[#1c2f5e] to-[#0A1E5B] p-8 text-white shadow-lg">
@@ -189,6 +236,14 @@ export default function UserDetailPage() {
               Inscrit le {formatDate(user.createdAt)}
             </div>
             <div className="text-xs text-white/40 font-mono mt-1 truncate">ID {user.id}</div>
+            {!isSuspended ? (
+              <button
+                onClick={toggleSuspension}
+                className="mt-4 w-full px-3 py-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/40 text-rose-100 font-semibold text-xs"
+              >
+                🚫 Suspendre ce compte
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

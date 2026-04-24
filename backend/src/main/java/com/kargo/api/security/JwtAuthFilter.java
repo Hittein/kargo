@@ -31,18 +31,35 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
             throws ServletException, IOException {
         String header = req.getHeader("Authorization");
+        boolean suspendedUserRequest = false;
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
             try {
                 Claims claims = jwt.parse(token);
                 UUID userId = UUID.fromString(claims.getSubject());
-                users.findById(userId).ifPresent(user -> {
-                    var auth = new UsernamePasswordAuthenticationToken(user, null, List.of());
-                    SecurityContextHolder.getContext().setAuthentication(auth);
-                });
+                var userOpt = users.findById(userId);
+                if (userOpt.isPresent()) {
+                    var user = userOpt.get();
+                    if ("suspended".equalsIgnoreCase(user.getStatus())) {
+                        suspendedUserRequest = true;
+                    } else {
+                        var auth = new UsernamePasswordAuthenticationToken(user, null, List.of());
+                        SecurityContextHolder.getContext().setAuthentication(auth);
+                    }
+                }
             } catch (JwtException | IllegalArgumentException ignored) {
                 // invalid token → request stays anonymous
             }
+        }
+        if (suspendedUserRequest) {
+            // Le user est identifié mais suspendu → on refuse avant d'entrer dans le
+            // filter chain applicatif. Le mobile intercepte 403 {error:"user_suspended"}
+            // pour déconnecter + afficher un écran bloquant.
+            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            res.setContentType("application/json");
+            res.getWriter().write("{\"error\":\"user_suspended\"}");
+            res.getWriter().flush();
+            return;
         }
         chain.doFilter(req, res);
     }

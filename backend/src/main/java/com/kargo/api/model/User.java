@@ -53,6 +53,17 @@ public class User {
     @Builder.Default
     private String role = "user"; // user | admin | merchant
 
+    /** active | suspended | pending_review. Nullable dans la DB pour permettre
+     *  ddl-auto=update d'ajouter la colonne sur une base existante (les lignes
+     *  héritées lues comme null sont traitées comme "active" dans le code). */
+    @Builder.Default
+    private String status = "active";
+
+    private Instant suspendedAt;
+
+    @Column(length = 500)
+    private String suspendReason;
+
     @Column(nullable = false)
     private Instant createdAt;
 

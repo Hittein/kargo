@@ -162,7 +162,12 @@ export default function UsersPage() {
                       {initial(r.user.name)}
                     </div>
                     <div>
-                      <div className="font-medium">{r.user.name || '—'}</div>
+                      <div className="font-medium flex items-center gap-2">
+                        {r.user.name || '—'}
+                        {r.user.status === 'suspended' ? (
+                          <Badge tone="danger">Suspendu</Badge>
+                        ) : null}
+                      </div>
                       <div className="text-xs text-slate-500">{r.user.phone}</div>
                     </div>
                   </div>

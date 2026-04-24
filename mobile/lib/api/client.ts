@@ -63,6 +63,9 @@ export async function request<T = unknown>(path: string, opts: RequestOptions = 
     const parsed = text ? safeJson(text) : null;
     if (!res.ok) {
       if (res.status === 401) useAuthStore.getState().signOut();
+      if (res.status === 403 && isSuspendedError(parsed)) {
+        useAuthStore.getState().signOut();
+      }
       throw new ApiError(res.status, parsed, typeof parsed === 'object' && parsed && 'error' in parsed ? String((parsed as Record<string, unknown>).error) : `HTTP ${res.status}`);
     }
     return parsed as T;
@@ -73,6 +76,15 @@ export async function request<T = unknown>(path: string, opts: RequestOptions = 
 
 function safeJson(s: string): unknown {
   try { return JSON.parse(s); } catch { return s; }
+}
+
+function isSuspendedError(body: unknown): boolean {
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    'error' in body &&
+    (body as Record<string, unknown>).error === 'user_suspended'
+  );
 }
 
 export const api = {

@@ -10,6 +10,7 @@ import com.kargo.api.model.RentalListing;
 import com.kargo.api.model.SavedSearch;
 import com.kargo.api.model.Conversation;
 import com.kargo.api.model.Message;
+import com.kargo.api.model.Ticket;
 
 import java.time.Instant;
 import java.util.List;
@@ -24,13 +25,16 @@ public class Dtos {
     public record UserDto(
             String id, String phone, String name, String email, String city, String avatarUrl,
             boolean phoneVerified, boolean emailVerified, int kycLevel,
-            boolean hasPin, boolean hasBiometric, int trustScore, String role, Instant createdAt
+            boolean hasPin, boolean hasBiometric, int trustScore, String role,
+            String status, Instant suspendedAt, String suspendReason, Instant createdAt
     ) {
         public static UserDto of(User u) {
+            String status = u.getStatus() == null ? "active" : u.getStatus();
             return new UserDto(
                     u.getId().toString(), u.getPhone(), u.getName(), u.getEmail(), u.getCity(), u.getAvatarUrl(),
                     u.isPhoneVerified(), u.isEmailVerified(), u.getKycLevel(),
-                    u.isHasPin(), u.isHasBiometric(), u.getTrustScore(), u.getRole(), u.getCreatedAt()
+                    u.isHasPin(), u.isHasBiometric(), u.getTrustScore(), u.getRole(),
+                    status, u.getSuspendedAt(), u.getSuspendReason(), u.getCreatedAt()
             );
         }
     }
@@ -237,4 +241,34 @@ public class Dtos {
     ) {}
 
     public record SendMessageRequest(String text) {}
+
+    public record TicketDto(
+            String id, String userId, String tripId, int seatsBooked,
+            long totalPaidMru, String paymentMethod, String status,
+            String qrToken, Instant createdAt, Instant usedAt,
+            String fromCityId, String toCityId, Instant departure
+    ) {
+        public static TicketDto of(Ticket t) {
+            return new TicketDto(
+                    t.getId().toString(),
+                    t.getUser().getId().toString(),
+                    t.getTrip().getId().toString(),
+                    t.getSeatsBooked(),
+                    t.getTotalPaidMru(),
+                    t.getPaymentMethod(),
+                    t.getStatus(),
+                    t.getQrToken(),
+                    t.getCreatedAt(),
+                    t.getUsedAt(),
+                    t.getTrip().getFromCityId(),
+                    t.getTrip().getToCityId(),
+                    t.getTrip().getDeparture()
+            );
+        }
+    }
+
+    public record CreateTicketRequest(
+            String tripId, int seatsBooked, long totalPaidMru,
+            String paymentMethod, String qrToken
+    ) {}
 }

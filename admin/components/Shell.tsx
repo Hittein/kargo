@@ -10,6 +10,7 @@ const NAV: { href: string; label: string; icon: string }[] = [
   { href: '/listings', label: 'Annonces marketplace', icon: '◇' },
   { href: '/rentals', label: 'Véhicules location', icon: '◆' },
   { href: '/transit', label: 'Trajets', icon: '◈' },
+  { href: '/tickets', label: 'Billets transport', icon: '◇' },
   { href: '/companies', label: 'Compagnies & agences', icon: '◉' },
   { href: '/wallets', label: 'Wallet & paiements', icon: '◊' },
   { href: '/disputes', label: 'Litiges', icon: '◍' },

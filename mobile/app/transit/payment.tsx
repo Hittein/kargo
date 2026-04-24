@@ -14,6 +14,7 @@ import {
 } from '@/lib/stores/booking';
 import { makeQrToken, makeTicketId, useTicketsStore } from '@/lib/stores/tickets';
 import { useWalletStore } from '@/lib/stores/wallet';
+import { ticketsApi } from '@/lib/api';
 
 const BOOKING_FEE = 150;
 const METHODS: PaymentMethod[] = ['kargo_wallet', 'bankily', 'masrvi', 'sedad', 'card'];
@@ -75,6 +76,7 @@ export default function TransitPayment() {
       pointsEarned,
     });
     wallet.addPoints(pointsEarned);
+    const qrToken = makeQrToken();
     addTicket({
       id: ticketId,
       tripId: trip.id,
@@ -82,9 +84,25 @@ export default function TransitPayment() {
       totalPaid: total,
       method,
       issuedAt: new Date().toISOString(),
-      qrToken: makeQrToken(),
+      qrToken,
       status: 'upcoming',
     });
+
+    // Trace l'achat côté backend (fire-and-forget). L'UX ne dépend pas du retour
+    // serveur : la réservation est déjà enregistrée localement. Si le backend est
+    // offline ou le trip est un mock (pas d'UUID valide), on ignore silencieusement.
+    if (/^[0-9a-f]{8}-/.test(trip.id)) {
+      ticketsApi
+        .createTicket({
+          tripId: trip.id,
+          seatsBooked: passengers.length,
+          totalPaidMru: total,
+          paymentMethod: method,
+          qrToken,
+        })
+        .catch(() => {});
+    }
+
     reset();
     router.replace(`/transit/ticket/${ticketId}`);
   };

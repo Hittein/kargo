@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kargo.api.dto.Dtos.ListingDto;
 import com.kargo.api.dto.Dtos.RentalListingDto;
+import com.kargo.api.dto.Dtos.TicketDto;
 import com.kargo.api.dto.Dtos.UserDto;
 import com.kargo.api.model.Listing;
 import com.kargo.api.model.ListingView;
@@ -13,6 +14,7 @@ import com.kargo.api.model.UserActivity;
 import com.kargo.api.repository.ListingRepository;
 import com.kargo.api.repository.ListingViewRepository;
 import com.kargo.api.repository.RentalListingRepository;
+import com.kargo.api.repository.TicketRepository;
 import com.kargo.api.repository.UserActivityRepository;
 import com.kargo.api.repository.UserRepository;
 import com.kargo.api.service.UserMergeService;
@@ -44,6 +46,7 @@ public class AdminController {
     private final UserRepository users;
     private final ListingViewRepository listingViews;
     private final UserActivityRepository activities;
+    private final TicketRepository tickets;
     private final UserMergeService mergeService;
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -53,6 +56,7 @@ public class AdminController {
             UserRepository users,
             ListingViewRepository listingViews,
             UserActivityRepository activities,
+            TicketRepository tickets,
             UserMergeService mergeService
     ) {
         this.listings = listings;
@@ -60,6 +64,7 @@ public class AdminController {
         this.users = users;
         this.listingViews = listingViews;
         this.activities = activities;
+        this.tickets = tickets;
         this.mergeService = mergeService;
     }
 
@@ -279,6 +284,49 @@ public class AdminController {
                             })
                             .toList();
                     return ResponseEntity.ok(out);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // -------------------- TICKETS --------------------
+
+    /** Tous les billets de transport achetés (admin, tous users). */
+    @GetMapping("/tickets")
+    public List<TicketDto> allTickets() {
+        return tickets.findAll().stream()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .map(TicketDto::of)
+                .toList();
+    }
+
+    // -------------------- USER STATUS (suspend / reactivate) --------------------
+
+    /** Change le status d'un user. Body: { "status": "active" | "suspended" | "pending_review", "reason"?: string }. */
+    @PatchMapping("/users/{id}/status")
+    public ResponseEntity<?> setUserStatus(
+            @PathVariable UUID id,
+            @RequestBody Map<String, String> body
+    ) {
+        String status = body.get("status");
+        if (status == null || status.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "status_required"));
+        }
+        String normalized = status.toLowerCase().trim();
+        if (!List.of("active", "suspended", "pending_review").contains(normalized)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "invalid_status"));
+        }
+        return users.findById(id)
+                .map(u -> {
+                    u.setStatus(normalized);
+                    if ("suspended".equals(normalized)) {
+                        u.setSuspendedAt(Instant.now());
+                        u.setSuspendReason(body.get("reason"));
+                    } else {
+                        u.setSuspendedAt(null);
+                        u.setSuspendReason(null);
+                    }
+                    users.save(u);
+                    return ResponseEntity.ok(UserDto.of(u));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
