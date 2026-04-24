@@ -27,10 +27,13 @@ export default function WelcomeScreen() {
           <Text variant="bodyL" tone="secondary" align="center">
             {t('app.tagline')}
           </Text>
+          <Text variant="caption" tone="secondary" align="center">
+            build v3
+          </Text>
         </View>
         <View style={{ gap: 12 }}>
           <Button label={t('common.continue')} fullWidth onPress={() => router.push('/(auth)/onboarding-1')} />
-          <Button label={t('common.skip')} variant="ghost" fullWidth onPress={skip} />
+          <Button label={t('common.skip') + ' →'} variant="ghost" fullWidth onPress={skip} />
         </View>
       </View>
     </Screen>
