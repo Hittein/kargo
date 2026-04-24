@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, Text } from '@/components/ui';
 import { useTheme, useThemeScheme } from '@/theme/ThemeProvider';
+import { useSellStore } from '@/lib/stores/sell';
 
 const STEPS: { icon: string; title: string; subtitle: string }[] = [
   {
@@ -33,6 +34,7 @@ export default function ListVehicle() {
   const theme = useTheme();
   const scheme = useThemeScheme();
   const router = useRouter();
+  const setMode = useSellStore((s) => s.setMode);
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.color.bg }}>
@@ -109,7 +111,10 @@ export default function ListVehicle() {
 
         <Button
           label="Commencer"
-          onPress={() => router.push('/marketplace/sell/vin')}
+          onPress={() => {
+            setMode('rent');
+            router.push('/marketplace/sell/vin');
+          }}
           leading={<Ionicons name="arrow-forward" size={16} color={theme.color.textInverse} />}
         />
         <Text variant="caption" tone="secondary" align="center">

@@ -39,8 +39,12 @@ const EMPTY: SellDraft = {
   contactMethods: [],
 };
 
+export type SellMode = 'sell' | 'rent';
+
 type State = {
+  mode: SellMode;
   draft: SellDraft;
+  setMode: (mode: SellMode) => void;
   patch: (p: Partial<SellDraft>) => void;
   addPhoto: (url: string) => void;
   removePhoto: (url: string) => void;
@@ -50,7 +54,9 @@ type State = {
 };
 
 export const useSellStore = create<State>((set, get) => ({
+  mode: 'sell',
   draft: EMPTY,
+  setMode: (mode) => set({ mode, draft: EMPTY }),
   patch: (p) => set((s) => ({ draft: { ...s.draft, ...p } })),
   addPhoto: (url) => {
     const d = get().draft;
@@ -78,7 +84,7 @@ export const useSellStore = create<State>((set, get) => ({
       },
     });
   },
-  reset: () => set({ draft: EMPTY }),
+  reset: () => set({ draft: EMPTY, mode: 'sell' }),
 }));
 
 export function sellProgress(draft: SellDraft): number {

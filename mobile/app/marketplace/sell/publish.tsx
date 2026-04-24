@@ -22,7 +22,8 @@ export default function SellPublish() {
   const theme = useTheme();
   const scheme = useThemeScheme();
   const router = useRouter();
-  const { draft, reset } = useSellStore();
+  const { draft, reset, mode } = useSellStore();
+  const isRent = mode === 'rent';
   const [state, setState] = useState<'preview' | 'publishing' | 'done'>('preview');
 
   const fresh = draft.importYear === CURRENT_YEAR && draft.ownersInCountry === 0;
@@ -102,8 +103,8 @@ export default function SellPublish() {
           <View style={{ padding: 16, gap: 6 }}>
             {fresh ? <Badge label="Fraîchement dédouanée" tone="success" /> : null}
             <Text variant="heading2" weight="bold" style={{ color: theme.color.primary }}>
-              {draft.price ? `${formatMRU(draft.price)} MRU` : '—'}
-              {draft.negotiable ? ' · négociable' : ''}
+              {draft.price ? `${formatMRU(draft.price)} MRU${isRent ? ' / jour' : ''}` : '—'}
+              {!isRent && draft.negotiable ? ' · négociable' : ''}
             </Text>
             <Text variant="bodyL" weight="semiBold">
               {draft.brand} · {draft.model} · {draft.year}
@@ -150,7 +151,7 @@ export default function SellPublish() {
             label="Éditer"
             variant="secondary"
             style={{ flex: 1 }}
-            onPress={() => router.replace('/marketplace/sell/vin')}
+            onPress={() => router.back()}
           />
           <Button
             label={state === 'publishing' ? 'Envoi…' : 'Publier'}

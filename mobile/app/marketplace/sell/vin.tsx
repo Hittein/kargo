@@ -13,7 +13,8 @@ export default function SellVin() {
   const theme = useTheme();
   const scheme = useThemeScheme();
   const router = useRouter();
-  const { draft, patch } = useSellStore();
+  const { draft, patch, mode } = useSellStore();
+  const isRent = mode === 'rent';
   const [vin, setVin] = useState(draft.vin ?? '');
   const [scanning, setScanning] = useState(false);
 
@@ -46,9 +47,9 @@ export default function SellVin() {
           <Ionicons name="chevron-back" size={24} color={theme.color.text} />
         </Pressable>
         <Text variant="heading2" weight="bold" style={{ flex: 1 }}>
-          Vendre ma voiture
+          {isRent ? 'Mettre en location' : 'Vendre ma voiture'}
         </Text>
-        <Badge label="A-06" tone="primary" />
+        <Badge label={isRent ? 'L-08' : 'A-06'} tone="primary" />
       </View>
 
       <SellStepper current={1} />

@@ -5,129 +5,133 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { Badge, Card, CircleIcon, GradientHero, Text } from '@/components/ui';
+import { Card, GradientHero, Text } from '@/components/ui';
 import { VehicleCard } from '@/components/VehicleCard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { filterVehicles, VEHICLES } from '@/lib/mocks/vehicles';
 import { useAuthStore } from '@/lib/stores/auth';
+import { useSellStore } from '@/lib/stores/sell';
+
+const ACTION_CARDS = [
+  {
+    key: 'buy' as const,
+    title: 'Achat',
+    subtitle: 'Voitures',
+    count: '210+',
+    photo: 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=500&q=70',
+    icon: 'car' as const,
+    bg: '#FFECE0',
+    accent: '#F97316',
+    href: '/marketplace/browse',
+  },
+  {
+    key: 'rent' as const,
+    title: 'Location',
+    subtitle: 'Voitures',
+    count: '120+',
+    photo: 'https://images.unsplash.com/photo-1511919884226-fd3cad34687c?w=500&q=70',
+    icon: 'key' as const,
+    bg: '#E4ECFD',
+    accent: '#2563EB',
+    href: '/rental/search',
+  },
+  {
+    key: 'trip' as const,
+    title: 'Billet Bus',
+    subtitle: 'Transports',
+    count: '45+',
+    photo: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=500&q=70',
+    icon: 'bus' as const,
+    bg: '#DCF6E7',
+    accent: '#10B981',
+    href: '/transit',
+  },
+];
 
 export default function HomeScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
+  const setSellMode = useSellStore((s) => s.setMode);
   const firstName = (user?.name || 'Bienvenue').split(' ')[0];
 
-  const actions: Array<{
-    key: 'buy' | 'rent' | 'trip';
-    photo: string;
-    title: string;
-    subtitle: string;
-    bg: string;
-    href: string;
-  }> = [
-    {
-      key: 'buy',
-      photo: 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=400&q=70',
-      title: t('home.actions.buy'),
-      subtitle: '10 voitures',
-      bg: theme.color.primarySoft,
-      href: '/marketplace/browse',
-    },
-    {
-      key: 'rent',
-      photo: 'https://images.unsplash.com/photo-1511919884226-fd3cad34687c?w=400&q=70',
-      title: t('home.actions.rent'),
-      subtitle: 'Courte & longue durée',
-      bg: '#FFF4D6',
-      href: '/rental/search',
-    },
-    {
-      key: 'trip',
-      photo: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=400&q=70',
-      title: t('home.actions.trip'),
-      subtitle: '6 villes MR',
-      bg: '#DDECF5',
-      href: '/transit',
-    },
-  ];
+  const suggestions = filterVehicles(VEHICLES, {}, 'recent').slice(0, 5);
 
-  const publishActions: Array<{
-    key: 'sell' | 'rentOut';
-    icon: keyof typeof Ionicons.glyphMap;
-    title: string;
-    subtitle: string;
-    badge: string;
-    bg: string;
-    accent: string;
-    href: string;
-  }> = [
-    {
-      key: 'sell',
-      icon: 'cash',
-      title: 'Vendre ma voiture',
-      subtitle: 'Estimation IA + visibilité 30j',
-      badge: 'GRATUIT',
-      bg: '#FFF7E6',
-      accent: '#F59E0B',
-      href: '/marketplace/sell/vin',
-    },
-    {
-      key: 'rentOut',
-      icon: 'key',
-      title: 'Mettre en location',
-      subtitle: 'Gagnez jusqu\'à 80 000 MRU/mois',
-      badge: 'PRO',
-      bg: '#E0F2FE',
-      accent: '#0284C7',
-      href: '/rental/list-vehicle',
-    },
-  ];
-
-  const suggestions = filterVehicles(VEHICLES, {}, 'recent').slice(0, 4);
+  const onPublishAction = (key: 'sell' | 'rentOut') => {
+    if (key === 'sell') {
+      setSellMode('sell');
+      router.push('/marketplace/sell/vin');
+    } else {
+      router.push('/rental/list-vehicle');
+    }
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.color.bg }}>
       <StatusBar style="light" />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 32, gap: 24 }}
+        contentContainerStyle={{ paddingBottom: 32, gap: 18 }}
       >
         <GradientHero preset="brand" radius="blob">
           <SafeAreaView edges={['top']}>
-            <View style={{ padding: 24, paddingBottom: 36, gap: 20 }}>
+            <View style={{ padding: 24, paddingBottom: 36, gap: 18 }}>
               <View
                 style={{
                   flexDirection: 'row',
-                  alignItems: 'center',
+                  alignItems: 'flex-start',
                   justifyContent: 'space-between',
                 }}
               >
-                <View>
-                  <Text variant="caption" style={{ color: '#FFFFFFAA' }}>
-                    {t('app.tagline')}
-                  </Text>
+                <View style={{ flex: 1, paddingRight: 12 }}>
                   <Text
                     variant="heading1"
                     weight="bold"
-                    style={{ color: theme.color.textInverse, marginTop: 2 }}
+                    style={{ color: theme.color.textInverse, fontSize: 28 }}
                   >
-                    {t('home.greeting', { name: firstName })}
+                    {t('home.greeting', { name: firstName })} 👋
+                  </Text>
+                  <Text
+                    variant="bodyM"
+                    style={{ color: '#FFFFFFCC', marginTop: 4 }}
+                  >
+                    {t('home.tagline')}
                   </Text>
                 </View>
                 <Pressable
-                  onPress={() => router.push('/wallet')}
+                  onPress={() => router.push('/wallet' as never)}
                   hitSlop={8}
                   style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 24,
-                    backgroundColor: 'rgba(255,255,255,0.18)',
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: 'rgba(255,255,255,0.16)',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <Ionicons name="wallet" size={20} color={theme.color.textInverse} />
+                  <Ionicons name="notifications-outline" size={20} color={theme.color.textInverse} />
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: -2,
+                      right: -2,
+                      minWidth: 18,
+                      height: 18,
+                      borderRadius: 9,
+                      paddingHorizontal: 4,
+                      backgroundColor: theme.color.primary,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 2,
+                      borderColor: 'rgba(30,30,90,1)',
+                    }}
+                  >
+                    <Text variant="caption" weight="bold" style={{ color: '#fff', fontSize: 10 }}>
+                      3
+                    </Text>
+                  </View>
                 </Pressable>
               </View>
 
@@ -138,7 +142,7 @@ export default function HomeScreen() {
                   alignItems: 'center',
                   gap: 10,
                   height: 56,
-                  paddingLeft: 20,
+                  paddingLeft: 18,
                   paddingRight: 8,
                   backgroundColor: theme.color.card,
                   borderRadius: theme.radius.pill,
@@ -168,134 +172,157 @@ export default function HomeScreen() {
           </SafeAreaView>
         </GradientHero>
 
-        <View style={{ paddingHorizontal: 20, gap: 12 }}>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            {actions.map((a) => (
-              <Card
-                key={a.key}
-                radius="xl"
-                padding={14}
-                variant="flat"
-                style={{
-                  flex: 1,
-                  backgroundColor: a.bg,
-                  borderColor: 'transparent',
-                  gap: 10,
-                }}
-                onPress={() => router.push(a.href as never)}
-              >
-                <Image
-                  source={{ uri: a.photo }}
-                  style={{ width: '100%', height: 72, borderRadius: 12 }}
-                  contentFit="cover"
-                  transition={150}
-                />
-                <View>
-                  <Text variant="bodyL" weight="bold" numberOfLines={1}>
-                    {a.title}
-                  </Text>
-                  <Text variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2 }}>
-                    {a.subtitle}
-                  </Text>
-                </View>
-              </Card>
-            ))}
-          </View>
-        </View>
-
-        <View style={{ paddingHorizontal: 20, gap: 12 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <View
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 16,
-                backgroundColor: theme.color.primary,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Ionicons name="megaphone" size={16} color={theme.color.textInverse} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text variant="heading2" weight="bold">
-                Vous voulez vendre ou louer ?
-              </Text>
-              <Text variant="caption" tone="secondary" style={{ marginTop: 2 }}>
-                Publiez votre annonce en quelques minutes.
-              </Text>
-            </View>
-          </View>
-
-          <View style={{ gap: 10 }}>
-            {publishActions.map((a) => (
+        <View style={{ paddingHorizontal: 16 }}>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            {ACTION_CARDS.map((a) => (
               <Pressable
                 key={a.key}
                 onPress={() => router.push(a.href as never)}
                 style={({ pressed }) => ({
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 14,
-                  padding: 16,
-                  borderRadius: theme.radius.xl,
+                  flex: 1,
                   backgroundColor: a.bg,
-                  borderWidth: 1,
-                  borderColor: a.accent + '33',
-                  opacity: pressed ? 0.92 : 1,
+                  borderRadius: 20,
+                  padding: 12,
+                  gap: 10,
+                  opacity: pressed ? 0.9 : 1,
                 })}
               >
                 <View
                   style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 24,
-                    backgroundColor: a.accent,
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
                   }}
                 >
-                  <Ionicons name={a.icon} size={22} color="#fff" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text variant="bodyL" weight="bold">
-                      {a.title}
-                    </Text>
-                    <View
-                      style={{
-                        paddingHorizontal: 8,
-                        paddingVertical: 2,
-                        borderRadius: 999,
-                        backgroundColor: a.accent,
-                      }}
-                    >
-                      <Text variant="caption" weight="bold" style={{ color: '#fff', fontSize: 10, letterSpacing: 0.4 }}>
-                        {a.badge}
-                      </Text>
-                    </View>
+                  <View
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: a.accent,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Ionicons name={a.icon} size={16} color="#fff" />
                   </View>
-                  <Text variant="caption" tone="secondary" style={{ marginTop: 3 }}>
+                  <Ionicons name="chevron-forward" size={14} color={a.accent} />
+                </View>
+                <Image
+                  source={{ uri: a.photo }}
+                  style={{ width: '100%', height: 64 }}
+                  contentFit="contain"
+                  transition={150}
+                />
+                <View style={{ gap: 2 }}>
+                  <Text variant="bodyL" weight="bold" numberOfLines={1}>
+                    {a.title}
+                  </Text>
+                  <Text variant="caption" tone="secondary" numberOfLines={1}>
                     {a.subtitle}
                   </Text>
                 </View>
                 <View
                   style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 18,
-                    backgroundColor: '#FFFFFFCC',
+                    alignSelf: 'stretch',
+                    paddingVertical: 6,
+                    paddingHorizontal: 10,
+                    borderRadius: 999,
+                    backgroundColor: '#FFFFFF',
                     alignItems: 'center',
-                    justifyContent: 'center',
                   }}
                 >
-                  <Ionicons name="arrow-forward" size={16} color={a.accent} />
+                  <Text variant="caption" weight="bold" style={{ color: a.accent }}>
+                    {a.count}
+                  </Text>
                 </View>
               </Pressable>
             ))}
           </View>
         </View>
 
-        <View style={{ paddingHorizontal: 20, gap: 12 }}>
+        <View style={{ paddingHorizontal: 16 }}>
+          <View
+            style={{
+              backgroundColor: theme.color.card,
+              borderRadius: 20,
+              padding: 16,
+              gap: 14,
+              borderWidth: 1,
+              borderColor: theme.color.border,
+            }}
+          >
+            <Pressable
+              onPress={() => onPublishAction('sell')}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
+            >
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: '#FFECE0',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="key" size={20} color={theme.color.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text variant="bodyL" weight="bold">
+                  {t('home.publishTitle')}
+                </Text>
+                <Text variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+                  {t('home.publishSubtitle')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={theme.color.textSecondary} />
+            </Pressable>
+
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Pressable
+                onPress={() => onPublishAction('sell')}
+                style={({ pressed }) => ({
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  paddingVertical: 14,
+                  borderRadius: 14,
+                  backgroundColor: '#FFECE0',
+                  opacity: pressed ? 0.9 : 1,
+                })}
+              >
+                <Ionicons name="car" size={16} color={theme.color.primary} />
+                <Text variant="bodyM" weight="semiBold" style={{ color: theme.color.primary }}>
+                  {t('home.sellAction')}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => onPublishAction('rentOut')}
+                style={({ pressed }) => ({
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  paddingVertical: 14,
+                  borderRadius: 14,
+                  backgroundColor: '#E4ECFD',
+                  opacity: pressed ? 0.9 : 1,
+                })}
+              >
+                <Ionicons name="key" size={16} color="#2563EB" />
+                <Text variant="bodyM" weight="semiBold" style={{ color: '#2563EB' }}>
+                  {t('home.rentOutAction')}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+
+        <View style={{ paddingHorizontal: 16, gap: 12 }}>
           <View
             style={{
               flexDirection: 'row',
@@ -308,7 +335,7 @@ export default function HomeScreen() {
             </Text>
             <Pressable onPress={() => router.push('/marketplace/search')} hitSlop={6}>
               <Text variant="caption" weight="semiBold" style={{ color: theme.color.primary }}>
-                Tout voir
+                {t('home.seeAll')}
               </Text>
             </Pressable>
           </View>
@@ -316,7 +343,7 @@ export default function HomeScreen() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 12, paddingRight: 20 }}
+            contentContainerStyle={{ gap: 12, paddingRight: 16 }}
           >
             {suggestions.map((v) => (
               <View key={v.id} style={{ width: 220 }}>
@@ -326,21 +353,59 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
 
-        <View style={{ paddingHorizontal: 20 }}>
-          <Card variant="soft" radius="xl">
-            <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
-              <CircleIcon name="shield-checkmark" size={44} tone="success" />
-              <View style={{ flex: 1 }}>
-                <Text variant="bodyL" weight="bold">
-                  Kargo Trust
-                </Text>
-                <Text variant="caption" tone="secondary" style={{ marginTop: 2 }}>
-                  Séquestre paiement, vérification VIN, inspection 80 points.
-                </Text>
+        <View style={{ paddingHorizontal: 16 }}>
+          <Pressable
+            onPress={() => router.push('/transit' as never)}
+            style={({ pressed }) => ({
+              opacity: pressed ? 0.95 : 1,
+            })}
+          >
+            <GradientHero preset="brand" radius="xxl">
+              <View
+                style={{
+                  flexDirection: 'row',
+                  padding: 20,
+                  alignItems: 'center',
+                  minHeight: 140,
+                }}
+              >
+                <View style={{ flex: 1, gap: 8 }}>
+                  <Text
+                    variant="heading2"
+                    weight="bold"
+                    style={{ color: theme.color.textInverse }}
+                  >
+                    {t('home.transitCtaTitle')}
+                  </Text>
+                  <Text variant="caption" style={{ color: '#FFFFFFCC' }}>
+                    {t('home.transitCtaSubtitle')}
+                  </Text>
+                  <View
+                    style={{
+                      alignSelf: 'flex-start',
+                      paddingHorizontal: 18,
+                      paddingVertical: 10,
+                      borderRadius: 999,
+                      backgroundColor: theme.color.primary,
+                      marginTop: 6,
+                    }}
+                  >
+                    <Text variant="bodyM" weight="bold" style={{ color: theme.color.textInverse }}>
+                      {t('home.transitCtaButton')}
+                    </Text>
+                  </View>
+                </View>
+                <Image
+                  source={{
+                    uri: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=400&q=70',
+                  }}
+                  style={{ width: 140, height: 100 }}
+                  contentFit="contain"
+                  transition={150}
+                />
               </View>
-              <Ionicons name="chevron-forward" size={18} color={theme.color.textSecondary} />
-            </View>
-          </Card>
+            </GradientHero>
+          </Pressable>
         </View>
       </ScrollView>
     </View>

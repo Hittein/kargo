@@ -32,7 +32,8 @@
   "submit": {
     "production": {
       "ios": {
-        "bundleIdentifier": "com.kargo.client"
+        "bundleIdentifier": "com.kargo.client",
+        "ascAppId": "6763460489"
       }
     }
   }

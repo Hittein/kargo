@@ -45,7 +45,16 @@
       "buy": "شراء",
       "rent": "إيجار",
       "trip": "رحلة"
-    }
+    },
+    "tagline": "شراء، إيجار، تنقل — في مكان واحد",
+    "publishTitle": "انشر إعلانك",
+    "publishSubtitle": "سريع، بسيط وفعال",
+    "transitCtaTitle": "ابحث عن رحلاتك",
+    "transitCtaSubtitle": "حافلات بين وداخل المدن",
+    "transitCtaButton": "بحث",
+    "sellAction": "بيع سيارتي",
+    "rentOutAction": "عرض للإيجار",
+    "seeAll": "عرض الكل"
   },
   "auth": {
     "welcome": "مرحباً بك في كارغو",

@@ -39,13 +39,22 @@
   },
   "home": {
     "greeting": "Bonjour, {{name}}",
-    "searchPlaceholder": "Rechercher une voiture…",
+    "searchPlaceholder": "Rechercher une voiture, un trajet…",
     "suggestions": "Suggestions pour vous",
     "actions": {
       "buy": "Achat",
       "rent": "Location",
       "trip": "Trajet"
-    }
+    },
+    "tagline": "Acheter, louer, voyager — en toute simplicité",
+    "publishTitle": "Publiez votre annonce",
+    "publishSubtitle": "Rapide, simple et efficace",
+    "transitCtaTitle": "Recherchez vos trajets",
+    "transitCtaSubtitle": "Bus interurbains et urbains",
+    "transitCtaButton": "Rechercher",
+    "sellAction": "Vendre ma voiture",
+    "rentOutAction": "Mettre en location",
+    "seeAll": "Voir tout"
   },
   "auth": {
     "welcome": "Bienvenue sur Kargo",

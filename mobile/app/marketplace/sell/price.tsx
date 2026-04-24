@@ -24,9 +24,13 @@ export default function SellPrice() {
   const theme = useTheme();
   const scheme = useThemeScheme();
   const router = useRouter();
-  const { draft, patch } = useSellStore();
+  const { draft, patch, mode } = useSellStore();
+  const isRent = mode === 'rent';
 
-  const estimate = useMemo(() => estimatePrice(draft.km, draft.year), [draft.km, draft.year]);
+  const estimate = useMemo(
+    () => (isRent ? undefined : estimatePrice(draft.km, draft.year)),
+    [draft.km, draft.year, isRent],
+  );
   const canContinue = !!(draft.price && draft.city);
 
   const verdict = (() => {
@@ -45,9 +49,9 @@ export default function SellPrice() {
           <Ionicons name="chevron-back" size={24} color={theme.color.text} />
         </Pressable>
         <Text variant="heading2" weight="bold" style={{ flex: 1 }}>
-          Prix & localisation
+          {isRent ? 'Tarif & localisation' : 'Prix & localisation'}
         </Text>
-        <Badge label="A-09" tone="primary" />
+        <Badge label={isRent ? 'L-10' : 'A-09'} tone="primary" />
       </View>
 
       <SellStepper current={3} />
@@ -73,13 +77,13 @@ export default function SellPrice() {
         ) : null}
 
         <Input
-          label="Prix demandé (MRU)"
+          label={isRent ? 'Tarif par jour (MRU)' : 'Prix demandé (MRU)'}
           value={draft.price?.toString() ?? ''}
           onChangeText={(v) => {
             const n = parseInt(v.replace(/\D/g, ''), 10);
             patch({ price: Number.isNaN(n) ? undefined : n });
           }}
-          placeholder="ex. 2 450 000"
+          placeholder={isRent ? 'ex. 7 000' : 'ex. 2 450 000'}
           keyboardType="number-pad"
           leading={<Ionicons name="pricetag" size={18} color={theme.color.textSecondary} />}
         />
@@ -90,19 +94,21 @@ export default function SellPrice() {
           </View>
         ) : null}
 
-        <Pressable
-          onPress={() => patch({ negotiable: !draft.negotiable })}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 }}
-        >
-          <Ionicons
-            name={draft.negotiable ? 'checkbox' : 'square-outline'}
-            size={22}
-            color={draft.negotiable ? theme.color.primary : theme.color.textSecondary}
-          />
-          <Text variant="bodyM" style={{ flex: 1 }}>
-            Prix négociable
-          </Text>
-        </Pressable>
+        {isRent ? null : (
+          <Pressable
+            onPress={() => patch({ negotiable: !draft.negotiable })}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 }}
+          >
+            <Ionicons
+              name={draft.negotiable ? 'checkbox' : 'square-outline'}
+              size={22}
+              color={draft.negotiable ? theme.color.primary : theme.color.textSecondary}
+            />
+            <Text variant="bodyM" style={{ flex: 1 }}>
+              Prix négociable
+            </Text>
+          </Pressable>
+        )}
 
         <Card variant="sand">
           <Text variant="caption" tone="secondary">

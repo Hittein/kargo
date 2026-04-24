@@ -15,6 +15,7 @@ import {
   type ListingStatus,
   type MyListing,
 } from '@/lib/mocks/my-listings';
+import { useSellStore } from '@/lib/stores/sell';
 
 type Tab = 'active' | 'moderation' | 'draft' | 'sold' | 'rejected';
 
@@ -120,7 +121,10 @@ export default function MyListings() {
             </Text>
             <Button
               label="Publier une annonce"
-              onPress={() => router.push('/marketplace/sell/vin')}
+              onPress={() => {
+                useSellStore.getState().setMode('sell');
+                router.push('/marketplace/sell/vin');
+              }}
               leading={<Ionicons name="add" size={16} color={theme.color.textInverse} />}
             />
           </View>
@@ -159,7 +163,10 @@ function ListingRow({ listing }: { listing: MyListing }) {
 
   const isDraft = listing.status === 'draft';
   const onPress = isDraft
-    ? () => router.push('/marketplace/sell/vin')
+    ? () => {
+        useSellStore.getState().setMode('sell');
+        router.push('/marketplace/sell/vin');
+      }
     : () => router.push(`/marketplace/${listing.id}` as never);
 
   return (
