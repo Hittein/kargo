@@ -8,6 +8,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useMessagingStore, type ChatMessage, type MessageContext } from '@/lib/stores/messaging';
 import { conversationsApi } from '@/lib/api';
 import { formatRelativeDate } from '@/lib/format';
+import { startCall } from '@/lib/call';
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -124,6 +125,44 @@ export default function ChatThread() {
             {ctxLabel(thread.context)}
           </Text>
         </View>
+        <Pressable
+          onPress={() => {
+            if (!id) return;
+            startCall({
+              conversationId: id,
+              peer: {
+                id: thread.id,
+                name: thread.partnerName,
+                avatarUrl: thread.partnerAvatarUrl,
+              },
+              mode: 'audio',
+            });
+            router.push(`/call/${id}` as never);
+          }}
+          hitSlop={8}
+          style={{ padding: 6 }}
+        >
+          <Ionicons name="call" size={22} color={theme.color.primary} />
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            if (!id) return;
+            startCall({
+              conversationId: id,
+              peer: {
+                id: thread.id,
+                name: thread.partnerName,
+                avatarUrl: thread.partnerAvatarUrl,
+              },
+              mode: 'video',
+            });
+            router.push(`/call/${id}` as never);
+          }}
+          hitSlop={8}
+          style={{ padding: 6 }}
+        >
+          <Ionicons name="videocam" size={22} color={theme.color.primary} />
+        </Pressable>
       </View>
 
       <FlatList

@@ -7,3 +7,4 @@ export * as walletApi from './wallet';
 export * as rentalsApi from './rentals';
 export * as savedSearchesApi from './saved-searches';
 export * as conversationsApi from './conversations';
+export * as callsApi from './calls';

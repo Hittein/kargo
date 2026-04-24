@@ -12,6 +12,7 @@ import '@/i18n';
 import { useKargoFonts } from '@/hooks/use-fonts';
 import { useAuthStore } from '@/lib/stores/auth';
 import { isBiometryOptedIn } from '@/lib/biometry';
+import { CallOverlay } from '@/components/CallOverlay';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -99,8 +100,10 @@ export default function RootLayout() {
                 <Stack.Screen name="trust" />
                 <Stack.Screen name="settings" />
                 <Stack.Screen name="support" />
+                <Stack.Screen name="call" options={{ presentation: 'fullScreenModal' }} />
                 <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
               </Stack>
+              <CallOverlay />
             </I18nGate>
           </ThemeProvider>
         </QueryClientProvider>

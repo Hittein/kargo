@@ -4,6 +4,11 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID || '8baafdc5-34ca-4da3-86ab-9b1ca8456299';
 const UPDATES_URL = `https://u.expo.dev/${EAS_PROJECT_ID}`;
 
+// Agora App ID — public côté mobile (identifie le projet, pas secret).
+// Le App Certificate reste exclusivement côté backend Render pour signer les tokens.
+const AGORA_APP_ID =
+  process.env.EXPO_PUBLIC_AGORA_APP_ID || 'c70d96373a9f45269b6fc4837b11cc0a';
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Kargo',
@@ -28,6 +33,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         'Kargo utilise votre position pour afficher les annonces et trajets près de vous.',
       NSFaceIDUsageDescription:
         'Kargo utilise Face ID pour sécuriser votre wallet et valider les paiements.',
+      NSMicrophoneUsageDescription:
+        'Kargo utilise le micro pour les appels audio avec les vendeurs et locataires.',
+      // Background modes nécessaires pour que l'appel Agora survive au lock écran / app en arrière-plan.
+      UIBackgroundModes: ['audio', 'voip'],
       ITSAppUsesNonExemptEncryption: false,
     },
   },
@@ -48,6 +57,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'android.permission.USE_BIOMETRIC',
       'android.permission.USE_FINGERPRINT',
       'android.permission.NFC',
+      'android.permission.RECORD_AUDIO',
+      'android.permission.MODIFY_AUDIO_SETTINGS',
+      'android.permission.BLUETOOTH',
+      'android.permission.BLUETOOTH_CONNECT',
+      'android.permission.FOREGROUND_SERVICE',
+      'android.permission.FOREGROUND_SERVICE_MICROPHONE',
     ],
   },
   web: {
@@ -88,6 +103,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     router: { origin: false },
     eas: { projectId: EAS_PROJECT_ID },
+    agoraAppId: AGORA_APP_ID,
   },
   experiments: {
     typedRoutes: true,
