@@ -35,10 +35,17 @@ services:
     rootDir: admin
     plan: free
     buildCommand: npm ci && npm run build
-    startCommand: npm start
+    # Render injecte PORT — on laisse next démarrer dessus. -p $PORT override
+    # le port hardcodé du package.json (3030, OK pour local dev mais Render
+    # attend que le process écoute sur $PORT).
+    startCommand: npx next start -p $PORT
     envVars:
       - key: NODE_VERSION
         value: "20"
+      # Full URL including /api/v1 suffix (admin/lib/api.ts does NOT append).
+      # Si tu renommes kargo-api ou migres l'URL, mets à jour cette valeur.
+      - key: NEXT_PUBLIC_API_URL
+        value: https://kargo-api-g00w.onrender.com/api/v1
 
 databases:
   - name: kargo-db
