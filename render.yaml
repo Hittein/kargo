@@ -17,8 +17,11 @@ services:
       # To rotate: flip `sync: false` then set the value via the Render dashboard.
       - key: JWT_SECRET
         generateValue: true
+      # En V1 on accepte tous les origines (admin Render obtient un suffixe random,
+      # localhost pour dev, Vercel preview, etc.). En prod stricte, lister les
+      # domaines effectifs.
       - key: CORS_ALLOWED_ORIGINS
-        value: https://kargo-admin.onrender.com
+        value: "*"
       - key: H2_CONSOLE_ENABLED
         value: "false"
       - key: OTP_SIMULATE
