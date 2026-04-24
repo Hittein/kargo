@@ -8,6 +8,8 @@ import com.kargo.api.model.Transaction;
 import com.kargo.api.model.Company;
 import com.kargo.api.model.RentalListing;
 import com.kargo.api.model.SavedSearch;
+import com.kargo.api.model.Conversation;
+import com.kargo.api.model.Message;
 
 import java.time.Instant;
 import java.util.List;
@@ -179,4 +181,58 @@ public class Dtos {
             String name, String filtersJson, String sort, String query,
             String category, Boolean freshlyImportedOnly, Boolean notifyEnabled
     ) {}
+
+    /** Fil de discussion renvoyé côté mobile. unread = unread pour l'utilisateur courant. */
+    public record ConversationDto(
+            String id, String kind, String listingId,
+            String partnerId, String partnerName, String partnerAvatarUrl,
+            String lastMessagePreview, Instant lastMessageAt,
+            int unread, Instant createdAt
+    ) {
+        public static ConversationDto of(Conversation c, String currentUserId) {
+            boolean iAmA = c.getParticipantA() != null
+                    && c.getParticipantA().getId().toString().equals(currentUserId);
+            var partner = iAmA ? c.getParticipantB() : c.getParticipantA();
+            int unread = iAmA ? c.getUnreadForA() : c.getUnreadForB();
+            return new ConversationDto(
+                    c.getId().toString(),
+                    c.getKind(),
+                    c.getListingId() != null ? c.getListingId().toString() : null,
+                    partner != null ? partner.getId().toString() : null,
+                    partner != null ? partner.getName() : "Support Kargo",
+                    partner != null ? partner.getAvatarUrl() : null,
+                    c.getLastMessagePreview(),
+                    c.getLastMessageAt(),
+                    unread,
+                    c.getCreatedAt()
+            );
+        }
+    }
+
+    public record MessageDto(
+            String id, String conversationId, String senderId,
+            boolean fromMe, String text, Instant createdAt, Instant readAt
+    ) {
+        public static MessageDto of(Message m, String currentUserId) {
+            boolean fromMe = m.getSender() != null
+                    && m.getSender().getId().toString().equals(currentUserId);
+            return new MessageDto(
+                    m.getId().toString(),
+                    m.getConversation().getId().toString(),
+                    m.getSender().getId().toString(),
+                    fromMe,
+                    m.getText(),
+                    m.getCreatedAt(),
+                    m.getReadAt()
+            );
+        }
+    }
+
+    /** Crée ou retrouve une conversation. Pour kind=LISTING, fournir listingId.
+     *  Pour kind=SUPPORT, aucun autre champ requis. */
+    public record StartConversationRequest(
+            String kind, String listingId, String partnerUserId
+    ) {}
+
+    public record SendMessageRequest(String text) {}
 }

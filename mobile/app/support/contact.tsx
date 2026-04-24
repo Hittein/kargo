@@ -18,10 +18,14 @@ export default function Contact() {
   const [topic, setTopic] = useState(TOPICS[0]);
   const [message, setMessage] = useState('');
 
-  const submit = () => {
+  const submit = async () => {
     if (!message.trim()) return;
-    const id = ensure({ kind: 'support' }, 'Support Kargo');
-    send(id, `[${topic}] ${message.trim()}`);
+    const id = await ensure({ kind: 'support' });
+    if (!id) {
+      Alert.alert('Erreur', 'Impossible de contacter le support, vérifiez votre connexion.');
+      return;
+    }
+    await send(id, `[${topic}] ${message.trim()}`);
     Alert.alert('Message envoyé', 'Notre équipe vous répond dans les meilleurs délais.', [
       { text: 'Voir la conversation', onPress: () => router.replace(`/chat/${id}`) },
       { text: 'OK', style: 'cancel' },

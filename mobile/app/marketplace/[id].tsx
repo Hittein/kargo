@@ -9,6 +9,7 @@ import { formatKm, formatMRU, formatRelativeDate } from '@/lib/format';
 import { getVehicleById, isFreshlyImported } from '@/lib/mocks/vehicles';
 import { useVehicle } from '@/lib/hooks/useListings';
 import { listingsApi } from '@/lib/api';
+import { useMessagingStore } from '@/lib/stores/messaging';
 
 function formatHands(n: number): string {
   if (n === 0) return '0 main';
@@ -207,9 +208,20 @@ export default function VehicleDetail() {
             label="Contacter"
             style={{ flex: 1.3 }}
             leading={<Ionicons name="chatbubble" size={16} color={theme.color.textInverse} />}
-            onPress={() => {
+            onPress={async () => {
               listingsApi.trackContact(vehicle.id).catch(() => {});
-              router.push(`/chat/${vehicle.id}` as never);
+              const threadId = await useMessagingStore
+                .getState()
+                .ensureThread({ kind: 'listing', vehicleId: vehicle.id });
+              if (threadId) {
+                router.push(`/chat/${threadId}` as never);
+              } else {
+                // Backend injoignable ou listing sans seller : fallback support.
+                const supportId = await useMessagingStore
+                  .getState()
+                  .ensureThread({ kind: 'support' });
+                if (supportId) router.push(`/chat/${supportId}` as never);
+              }
             }}
           />
         </View>

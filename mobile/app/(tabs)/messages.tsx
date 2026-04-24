@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { RefreshControl, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Badge, Card, Screen, SegmentedTabs, Text } from '@/components/ui';
@@ -13,7 +13,13 @@ export default function MessagesScreen() {
   const theme = useTheme();
   const router = useRouter();
   const threads = useMessagingStore((s) => s.threads);
+  const syncFromBackend = useMessagingStore((s) => s.syncFromBackend);
+  const syncing = useMessagingStore((s) => s.syncing);
   const [tab, setTab] = useState<Tab>('all');
+
+  useEffect(() => {
+    syncFromBackend();
+  }, [syncFromBackend]);
 
   const filtered = useMemo(() => {
     if (tab === 'all') return threads;
@@ -21,7 +27,18 @@ export default function MessagesScreen() {
   }, [threads, tab]);
 
   return (
-    <Screen scroll>
+    <Screen
+      scroll
+      scrollProps={{
+        refreshControl: (
+          <RefreshControl
+            refreshing={syncing}
+            onRefresh={syncFromBackend}
+            tintColor={theme.color.primary}
+          />
+        ),
+      }}
+    >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Text variant="heading1">Messages</Text>
         <Badge label="M-01" tone="neutral" />

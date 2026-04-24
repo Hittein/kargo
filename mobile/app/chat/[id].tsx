@@ -6,7 +6,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, Input, Text } from '@/components/ui';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useMessagingStore, type ChatMessage, type MessageContext } from '@/lib/stores/messaging';
+import { conversationsApi } from '@/lib/api';
 import { formatRelativeDate } from '@/lib/format';
+
+const POLL_INTERVAL_MS = 5000;
 
 const TEMPLATES = [
   'La voiture est-elle encore disponible ?',
@@ -23,13 +26,39 @@ export default function ChatThread() {
   const messages = useMessagingStore((s) => s.messages[id ?? ''] ?? []);
   const send = useMessagingStore((s) => s.send);
   const markRead = useMessagingStore((s) => s.markRead);
+  const syncFromBackend = useMessagingStore((s) => s.syncFromBackend);
 
   const [input, setInput] = useState('');
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
+  // Sync initiale + polling 5s pour voir les nouveaux messages du partenaire.
   useEffect(() => {
-    if (id) markRead(id);
-  }, [id, markRead]);
+    if (!id) return;
+    syncFromBackend(id);
+    markRead(id);
+    const handle = setInterval(() => {
+      if (!id) return;
+      conversationsApi
+        .listMessages(id)
+        .then((msgs) => {
+          useMessagingStore.setState((s) => ({
+            messages: {
+              ...s.messages,
+              [id]: msgs.map((m) => ({
+                id: m.id,
+                threadId: m.conversationId,
+                fromMe: m.fromMe,
+                text: m.text,
+                createdAt: m.createdAt,
+                read: m.readAt != null,
+              })),
+            },
+          }));
+        })
+        .catch(() => {});
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(handle);
+  }, [id, markRead, syncFromBackend]);
 
   useEffect(() => {
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
@@ -38,9 +67,12 @@ export default function ChatThread() {
   if (!thread) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: theme.color.bg }}>
-        <Text variant="bodyM" style={{ padding: 20 }}>
-          Conversation introuvable.
-        </Text>
+        <View style={{ padding: 20, gap: 10 }}>
+          <Text variant="bodyM">Conversation introuvable ou non chargée.</Text>
+          <Text variant="caption" tone="secondary">
+            Réessayez depuis la liste des messages.
+          </Text>
+        </View>
       </SafeAreaView>
     );
   }
