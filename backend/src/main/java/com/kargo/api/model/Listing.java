@@ -85,9 +85,10 @@ public class Listing {
     @Builder.Default
     private Integer favoriteCount = 0;
 
+    /** pending = en modération admin ; active = publiée ; rejected = refusée ; sold ; draft. */
     @Column(nullable = false)
     @Builder.Default
-    private String status = "active";
+    private String status = "pending";
 
     @Column(nullable = false)
     private Instant publishedAt;

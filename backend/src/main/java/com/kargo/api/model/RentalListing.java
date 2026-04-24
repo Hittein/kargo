@@ -75,9 +75,10 @@ public class RentalListing {
     @Column(nullable = false)
     private String city;
 
+    /** pending = en modération ; active = publiée ; rejected ; archived. */
     @Column(nullable = false)
     @Builder.Default
-    private String status = "active";
+    private String status = "pending";
 
     @Column(nullable = false)
     @Builder.Default

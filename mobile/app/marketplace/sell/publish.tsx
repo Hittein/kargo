@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Badge, Button, Card, StickyCTA, Text } from '@/components/ui';
@@ -10,6 +11,8 @@ import { useTheme, useThemeScheme } from '@/theme/ThemeProvider';
 import { formatKm, formatMRU } from '@/lib/format';
 import { CURRENT_YEAR } from '@/lib/mocks/vehicles';
 import { useSellStore } from '@/lib/stores/sell';
+import { useAuthStore } from '@/lib/stores/auth';
+import { listingsApi, rentalsApi } from '@/lib/api';
 
 function formatHands(n?: number): string {
   if (n == null) return '—';
@@ -23,14 +26,80 @@ export default function SellPublish() {
   const scheme = useThemeScheme();
   const router = useRouter();
   const { draft, reset, mode } = useSellStore();
+  const user = useAuthStore((s) => s.user);
+  const queryClient = useQueryClient();
   const isRent = mode === 'rent';
   const [state, setState] = useState<'preview' | 'publishing' | 'done'>('preview');
 
   const fresh = draft.importYear === CURRENT_YEAR && draft.ownersInCountry === 0;
 
-  const publish = () => {
+  const publish = async () => {
+    // Validation minimale — évite d'envoyer un payload incomplet au backend.
+    const missing: string[] = [];
+    if (!draft.brand) missing.push('marque');
+    if (!draft.model) missing.push('modèle');
+    if (!draft.year) missing.push('année');
+    if (draft.price == null) missing.push('prix');
+    if (draft.km == null) missing.push('kilométrage');
+    if (!draft.fuel) missing.push('carburant');
+    if (!draft.transmission) missing.push('transmission');
+    if (!draft.city) missing.push('ville');
+    if (missing.length > 0) {
+      Alert.alert('Informations manquantes', `Merci de compléter : ${missing.join(', ')}`);
+      return;
+    }
+    if (draft.photoUrls.length < 3) {
+      Alert.alert('Photos requises', 'Minimum 3 photos pour publier.');
+      return;
+    }
+
     setState('publishing');
-    setTimeout(() => setState('done'), 1200);
+    try {
+      if (isRent) {
+        await rentalsApi.createRental({
+          brand: draft.brand!,
+          model: draft.model!,
+          year: draft.year!,
+          category: draft.bodyType || 'Berline',
+          pricePerDayMru: draft.price!,
+          seats: 5,
+          transmission: draft.transmission === 'auto' ? 'auto' : 'manual',
+          airCon: true,
+          chauffeurAvailable: false,
+          city: draft.city!,
+          photoUrls: draft.photoUrls,
+        });
+        queryClient.invalidateQueries({ queryKey: ['rentals'] });
+      } else {
+        await listingsApi.createListing({
+          brand: draft.brand!,
+          model: draft.model!,
+          year: draft.year!,
+          importYear: draft.importYear,
+          ownersInCountry: draft.ownersInCountry ?? 0,
+          priceMru: draft.price!,
+          km: draft.km!,
+          fuel: draft.fuel!,
+          transmission: draft.transmission!,
+          city: draft.city!,
+          district: draft.district,
+          sellerName: user?.name || 'Vendeur',
+          sellerType: 'particulier',
+          kargoVerified: false,
+          photoUrls: draft.photoUrls,
+        });
+        queryClient.invalidateQueries({ queryKey: ['my-listings'] });
+        queryClient.invalidateQueries({ queryKey: ['listings'] });
+      }
+      setState('done');
+    } catch (e) {
+      setState('preview');
+      const msg = e instanceof Error ? e.message : 'Erreur inconnue';
+      Alert.alert(
+        'Publication échouée',
+        `Votre annonce n'a pas pu être envoyée au serveur. ${msg}\n\nVérifiez votre connexion et réessayez.`,
+      );
+    }
   };
 
   if (state === 'done') {
@@ -54,7 +123,7 @@ export default function SellPublish() {
             Annonce envoyée
           </Text>
           <Text variant="bodyM" tone="secondary" align="center">
-            Modération IA en cours (≈ 30 s). Validation humaine dans les 30 min.
+            Votre annonce est en attente de validation par l'équipe Kargo. Vous serez notifié dès qu'elle est publiée (généralement moins de 30 min).
           </Text>
           <View style={{ width: '100%', gap: 10, marginTop: 20 }}>
             <Button

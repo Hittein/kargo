@@ -27,10 +27,36 @@ export type ApiRentalListing = {
   createdAt: string;
 };
 
+export type CreateRentalPayload = {
+  companyId?: string;
+  brand: string;
+  model: string;
+  year: number;
+  category: string;
+  pricePerDayMru: number;
+  priceWeeklyMru?: number;
+  priceMonthlyMru?: number;
+  seats: number;
+  transmission: 'manual' | 'auto';
+  airCon: boolean;
+  minDays?: number;
+  depositMru?: number;
+  kmIncludedPerDay?: number;
+  extraKmMru?: number;
+  chauffeurAvailable: boolean;
+  chauffeurPricePerDayMru?: number;
+  city: string;
+  photoUrls: string[];
+};
+
 export async function listRentals() {
   return api.get<ApiRentalListing[]>('/rental-listings', { auth: false });
 }
 
 export async function getRental(id: string) {
   return api.get<ApiRentalListing>(`/rental-listings/${id}`, { auth: false });
+}
+
+export async function createRental(body: CreateRentalPayload) {
+  return api.post<ApiRentalListing>('/rental-listings', body);
 }

@@ -48,6 +48,7 @@ public class SecurityConfig {
                                 "/api/v1/companies/**",
                                 "/api/v1/rental-listings",
                                 "/api/v1/rental-listings/**",
+                                "/api/v1/admin/**",
                                 "/actuator/**",
                                 "/h2/**",
                                 "/error"

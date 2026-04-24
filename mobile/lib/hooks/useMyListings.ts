@@ -3,6 +3,26 @@ import { listingsApi } from '@/lib/api';
 import type { ApiListing } from '@/lib/api/types';
 import { MY_LISTINGS, type MyListing } from '@/lib/mocks/my-listings';
 
+function mapStatus(raw: string | undefined): MyListing['status'] {
+  // Backend utilise 'pending' pour "en modération". L'UI a historiquement
+  // utilisé 'moderation' — on mappe pour garder les labels/couleurs existants.
+  switch ((raw ?? '').toLowerCase()) {
+    case 'pending':
+    case 'moderation':
+      return 'moderation';
+    case 'active':
+      return 'active';
+    case 'rejected':
+      return 'rejected';
+    case 'sold':
+      return 'sold';
+    case 'draft':
+      return 'draft';
+    default:
+      return 'active';
+  }
+}
+
 function fromApi(a: ApiListing): MyListing {
   return {
     id: a.id,
@@ -13,7 +33,7 @@ function fromApi(a: ApiListing): MyListing {
     km: a.km,
     city: a.city,
     photoUrl: a.photoUrls?.[0] ?? '',
-    status: (a.status as MyListing['status']) ?? 'active',
+    status: mapStatus(a.status),
     views: a.viewCount ?? 0,
     leads: a.contactCount ?? 0,
     favorites: a.favoriteCount ?? 0,
