@@ -5,7 +5,6 @@ import com.kargo.api.model.Listing;
 import com.kargo.api.model.ListingView;
 import com.kargo.api.model.Message;
 import com.kargo.api.model.SavedSearch;
-import com.kargo.api.model.Ticket;
 import com.kargo.api.model.Transaction;
 import com.kargo.api.model.User;
 import com.kargo.api.model.UserActivity;
@@ -15,7 +14,6 @@ import com.kargo.api.repository.ListingRepository;
 import com.kargo.api.repository.ListingViewRepository;
 import com.kargo.api.repository.MessageRepository;
 import com.kargo.api.repository.SavedSearchRepository;
-import com.kargo.api.repository.TicketRepository;
 import com.kargo.api.repository.TransactionRepository;
 import com.kargo.api.repository.UserActivityRepository;
 import com.kargo.api.repository.UserRepository;
@@ -39,7 +37,6 @@ public class UserMergeService {
     private final ListingViewRepository listingViews;
     private final SavedSearchRepository savedSearches;
     private final TransactionRepository transactions;
-    private final TicketRepository tickets;
     private final UserActivityRepository activities;
     private final ConversationRepository conversations;
     private final MessageRepository messages;
@@ -51,7 +48,6 @@ public class UserMergeService {
             ListingViewRepository listingViews,
             SavedSearchRepository savedSearches,
             TransactionRepository transactions,
-            TicketRepository tickets,
             UserActivityRepository activities,
             ConversationRepository conversations,
             MessageRepository messages,
@@ -62,7 +58,6 @@ public class UserMergeService {
         this.listingViews = listingViews;
         this.savedSearches = savedSearches;
         this.transactions = transactions;
-        this.tickets = tickets;
         this.activities = activities;
         this.conversations = conversations;
         this.messages = messages;
@@ -72,7 +67,7 @@ public class UserMergeService {
     @Transactional
     public MergeResult merge(User primary, User secondary) {
         if (primary.getId().equals(secondary.getId())) {
-            return new MergeResult(0, 0, 0, 0, 0, 0, 0);
+            return new MergeResult(0, 0, 0, 0, 0, 0);
         }
 
         int listingCount = 0;
@@ -101,13 +96,6 @@ public class UserMergeService {
             t.setUser(primary);
             transactions.save(t);
             txCount++;
-        }
-
-        int ticketCount = 0;
-        for (Ticket t : tickets.findByUserOrderByCreatedAtDesc(secondary)) {
-            t.setUser(primary);
-            tickets.save(t);
-            ticketCount++;
         }
 
         int activityCount = 0;
@@ -157,7 +145,7 @@ public class UserMergeService {
         users.delete(secondary);
 
         return new MergeResult(listingCount, viewCount, savedCount, txCount,
-                ticketCount, activityCount, convCount);
+                activityCount, convCount);
     }
 
     public record MergeResult(
@@ -165,7 +153,6 @@ public class UserMergeService {
             int listingViews,
             int savedSearches,
             int transactions,
-            int tickets,
             int activities,
             int conversations
     ) {}
