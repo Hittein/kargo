@@ -24,7 +24,9 @@ export async function listListings() {
 }
 
 export async function createListing(body: CreateListingPayload) {
-  return api.post<ApiListing>('/listings', body);
+  // Timeout large : Render free tier met parfois 30s+ à se réveiller d'un cold start.
+  // Sans ce buffer on perd les publications silencieusement.
+  return api.post<ApiListing>('/listings', body, { timeoutMs: 45_000 });
 }
 
 export async function getListing(id: string) {

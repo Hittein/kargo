@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Badge, Button, Card, Chip, Text } from '@/components/ui';
@@ -32,8 +32,16 @@ export default function MyListings() {
   const theme = useTheme();
   const scheme = useThemeScheme();
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>('active');
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const initialTab: Tab = (params.tab as Tab) in TAB_STATUS ? (params.tab as Tab) : 'active';
+  const [tab, setTab] = useState<Tab>(initialTab);
   const { data: listings = MY_LISTINGS, isFetching, refetch } = useMyListings();
+
+  useEffect(() => {
+    if (params.tab && (params.tab as Tab) in TAB_STATUS) {
+      setTab(params.tab as Tab);
+    }
+  }, [params.tab]);
 
   const counts = useMemo(() => {
     const c: Record<ListingStatus, number> = {

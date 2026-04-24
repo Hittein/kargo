@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { Badge, Card, PageHeader } from '@/components/Page';
 import { apiGet, type ApiAdminUserRow } from '@/lib/api';
 
+type DuplicateGroupLite = { normalizedPhone: string; users: { user: { id: string } }[] };
+
 function initial(name: string) {
   return (name || '?').slice(0, 1).toUpperCase();
 }
@@ -26,6 +28,7 @@ export default function UsersPage() {
   const [err, setErr] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'with_listings' | 'pending_review'>('all');
+  const [dupeCount, setDupeCount] = useState(0);
 
   const load = async () => {
     try {
@@ -40,6 +43,9 @@ export default function UsersPage() {
   };
   useEffect(() => {
     load();
+    apiGet<DuplicateGroupLite[]>('/admin/users/duplicates')
+      .then((gs) => setDupeCount(gs.reduce((n, g) => n + g.users.length - 1, 0)))
+      .catch(() => {});
   }, []);
 
   const filtered = useMemo(() => {
@@ -69,6 +75,16 @@ export default function UsersPage() {
             ? ` — ${pendingReviewUsers} avec annonce(s) à modérer`
             : ''
         }`}
+        actions={
+          dupeCount > 0 ? (
+            <Link
+              href="/users/duplicates"
+              className="px-4 py-2 bg-amber text-white rounded-lg text-sm font-semibold"
+            >
+              ⚠ {dupeCount} doublon{dupeCount > 1 ? 's' : ''} à fusionner
+            </Link>
+          ) : undefined
+        }
       />
 
       {loading ? (

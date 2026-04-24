@@ -130,7 +130,7 @@ export default function SellPublish() {
               label="Voir mes annonces"
               onPress={() => {
                 reset();
-                router.replace('/settings/my-listings');
+                router.replace('/settings/my-listings?tab=moderation');
               }}
             />
             <Button

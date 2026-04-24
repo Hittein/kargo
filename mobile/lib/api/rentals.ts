@@ -58,5 +58,5 @@ export async function getRental(id: string) {
 }
 
 export async function createRental(body: CreateRentalPayload) {
-  return api.post<ApiRentalListing>('/rental-listings', body);
+  return api.post<ApiRentalListing>('/rental-listings', body, { timeoutMs: 45_000 });
 }

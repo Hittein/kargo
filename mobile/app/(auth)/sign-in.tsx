@@ -7,6 +7,7 @@ import { Button, Input, Screen, Text } from '@/components/ui';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuthStore } from '@/lib/stores/auth';
 import { authApi } from '@/lib/api';
+import { normalizePhone } from '@/lib/phone';
 
 export default function SignInScreen() {
   const theme = useTheme();
@@ -16,29 +17,36 @@ export default function SignInScreen() {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const isValid = /^[\d\s+]{8,}$/.test(phone.trim());
+  const normalized = normalizePhone(phone);
+  const isValid = normalized !== null;
 
   const submit = async () => {
-    if (!isValid) return;
+    const phoneNorm = normalizePhone(phone);
+    if (!phoneNorm) {
+      Alert.alert(
+        'Numéro invalide',
+        'Entrez un numéro mauritanien à 8 chiffres (ex. 45 25 25 25). Le préfixe +222 est optionnel.',
+      );
+      return;
+    }
     setLoading(true);
-    const phoneTrim = phone.trim();
     try {
       // Real backend (Render). En dev prod-OTP simulé : la réponse contient simulatedCode.
-      const res = await authApi.startOtp(phoneTrim);
+      const res = await authApi.startOtp(phoneNorm);
       // On garde aussi un OTP local de secours (au cas où le backend tombe entre start et verify).
-      const localCode = startSignIn(phoneTrim);
+      const localCode = startSignIn(phoneNorm);
       const code = res.simulatedCode || localCode;
       Alert.alert(
         'Code OTP envoyé',
-        `Numéro : ${phoneTrim}\nCode : ${code}\n\nAstuce : 0000 ou 000000 sont aussi acceptés.`,
+        `Numéro : ${phoneNorm}\nCode : ${code}\n\nAstuce : 0000 ou 000000 sont aussi acceptés.`,
         [{ text: 'Continuer', onPress: () => router.push('/(auth)/otp') }],
       );
     } catch {
       // Fallback offline : on simule en local seulement.
-      const code = startSignIn(phoneTrim);
+      const code = startSignIn(phoneNorm);
       Alert.alert(
         'Mode hors-ligne (simulation locale)',
-        `Numéro : ${phoneTrim}\nCode : ${code}\n\n0000/000000 acceptés.`,
+        `Numéro : ${phoneNorm}\nCode : ${code}\n\n0000/000000 acceptés.`,
         [{ text: 'Continuer', onPress: () => router.push('/(auth)/otp') }],
       );
     } finally {
@@ -47,7 +55,7 @@ export default function SignInScreen() {
   };
 
   const continueWith = (provider: 'google' | 'apple') => {
-    const fakePhone = provider === 'google' ? '+222 22 22 22 22' : '+222 33 33 33 33';
+    const fakePhone = provider === 'google' ? '22222222' : '33333333';
     setPhone(fakePhone);
     const code = startSignIn(fakePhone);
     Alert.alert(`${provider === 'google' ? 'Google' : 'Apple'} (simulation)`, `Code OTP : ${code}`, [
