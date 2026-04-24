@@ -1,38 +1,52 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Badge, Card, PageHeader } from '@/components/Page';
-import { TRIPS, formatMRU } from '@/lib/data';
-import type { AdminTrip } from '@/lib/data';
+import { apiGet, apiDelete, type ApiTrip } from '@/lib/api';
 
 export default function TransitPage() {
-  const [trips, setTrips] = useState(TRIPS);
+  const [trips, setTrips] = useState<ApiTrip[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
 
-  const updateStatus = (id: string, status: AdminTrip['status']) => {
-    setTrips(trips.map((t) => (t.id === id ? { ...t, status } : t)));
+  const load = async () => {
+    try {
+      setLoading(true);
+      setTrips(await apiGet<ApiTrip[]>('/trips'));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'load_failed');
+    } finally {
+      setLoading(false);
+    }
   };
+  useEffect(() => { load(); }, []);
 
-  const total = trips.length;
-  const active = trips.filter((t) => t.status === 'in_transit' || t.status === 'boarding').length;
-  const cancelled = trips.filter((t) => t.status === 'cancelled').length;
-  const seatsSold = trips.reduce((a, t) => a + (t.seatsTotal - t.seatsLeft), 0);
+  const remove = async (id: string) => {
+    if (!confirm('Supprimer ce trajet ?')) return;
+    await apiDelete(`/trips/${id}`);
+    load();
+  };
 
   return (
     <>
-      <PageHeader title="Trajets inter-villes" subtitle="Plannings, taux de remplissage, incidents." />
+      <PageHeader
+        title="Trajets inter-villes"
+        subtitle="Plannings et taux de remplissage."
+        actions={
+          <Link href="/transit/new" className="px-4 py-2 bg-amber text-white rounded-lg text-sm font-semibold">
+            + Nouveau trajet
+          </Link>
+        }
+      />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatTile label="Trajets jour" value={String(total)} />
-        <StatTile label="En cours" value={String(active)} tone="success" />
-        <StatTile label="Annulés" value={String(cancelled)} tone={cancelled > 0 ? 'danger' : 'success'} />
-        <StatTile label="Places vendues" value={String(seatsSold)} />
-      </div>
+      {loading ? <Card><div className="p-6 text-slate-500">Chargement…</div></Card> : null}
+      {err ? <Card><div className="p-6 text-rose-600">Erreur API : {err}</div></Card> : null}
 
       <Card>
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
             <tr>
               <th className="px-5 py-3 text-left">Trajet</th>
-              <th className="px-5 py-3 text-left">Compagnie</th>
               <th className="px-5 py-3 text-center">Départ</th>
               <th className="px-5 py-3 text-right">Prix</th>
               <th className="px-5 py-3 text-center">Remplissage</th>
@@ -47,12 +61,11 @@ export default function TransitPage() {
               return (
                 <tr key={t.id}>
                   <td className="px-5 py-3">
-                    <div className="font-medium">{t.from} → {t.to}</div>
-                    <div className="text-xs text-slate-500">#{t.id}</div>
+                    <div className="font-medium">{t.fromCityId.toUpperCase()} → {t.toCityId.toUpperCase()}</div>
+                    <div className="text-xs text-slate-500">{t.fromStop} → {t.toStop}</div>
                   </td>
-                  <td className="px-5 py-3">{t.company}</td>
                   <td className="px-5 py-3 text-center text-xs">{new Date(t.departure).toLocaleString('fr-FR')}</td>
-                  <td className="px-5 py-3 text-right font-mono">{formatMRU(t.price)} MRU</td>
+                  <td className="px-5 py-3 text-right font-mono">{t.priceMru.toLocaleString('fr-FR')} MRU</td>
                   <td className="px-5 py-3 text-center">
                     <div className="flex items-center gap-2 justify-center">
                       <div className="w-20 h-2 bg-slate-200 rounded-full overflow-hidden">
@@ -62,47 +75,24 @@ export default function TransitPage() {
                     </div>
                   </td>
                   <td className="px-5 py-3 text-center">
-                    <Badge
-                      tone={
-                        t.status === 'arrived' ? 'success'
-                          : t.status === 'in_transit' ? 'info'
-                            : t.status === 'cancelled' ? 'danger'
-                              : 'warn'
-                      }
-                    >
+                    <Badge tone={t.status === 'in_transit' ? 'info' : t.status === 'cancelled' ? 'danger' : 'warn'}>
                       {t.status}
                     </Badge>
                   </td>
                   <td className="px-5 py-3 text-right">
-                    <div className="flex justify-end gap-2">
-                      {t.status !== 'cancelled' && t.status !== 'arrived' ? (
-                        <button onClick={() => updateStatus(t.id, 'cancelled')} className="text-xs text-rose-600 hover:underline">
-                          Annuler
-                        </button>
-                      ) : null}
-                      {t.status === 'scheduled' ? (
-                        <button onClick={() => updateStatus(t.id, 'boarding')} className="text-xs text-amber hover:underline">
-                          Lancer embarquement
-                        </button>
-                      ) : null}
-                    </div>
+                    <button onClick={() => remove(t.id)} className="text-xs text-rose-600 hover:underline">
+                      Supprimer
+                    </button>
                   </td>
                 </tr>
               );
             })}
+            {trips.length === 0 && !loading ? (
+              <tr><td colSpan={6} className="px-5 py-8 text-center text-slate-500">Aucun trajet programmé.</td></tr>
+            ) : null}
           </tbody>
         </table>
       </Card>
     </>
-  );
-}
-
-function StatTile({ label, value, tone = 'default' }: { label: string; value: string; tone?: 'default' | 'success' | 'danger' }) {
-  const cls = { default: 'text-ink', success: 'text-emerald-600', danger: 'text-rose-600' }[tone];
-  return (
-    <div className="bg-white rounded-xl p-5 border border-slate-100">
-      <div className="text-xs uppercase tracking-wider text-slate-500 mb-2">{label}</div>
-      <div className={`text-2xl font-bold ${cls}`}>{value}</div>
-    </div>
   );
 }

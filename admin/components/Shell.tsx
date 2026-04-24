@@ -7,9 +7,10 @@ import { useAdminAuth } from '@/lib/auth';
 const NAV: { href: string; label: string; icon: string }[] = [
   { href: '/', label: 'Tableau de bord', icon: '◐' },
   { href: '/users', label: 'Utilisateurs', icon: '◯' },
-  { href: '/listings', label: 'Annonces', icon: '◇' },
+  { href: '/listings', label: 'Annonces marketplace', icon: '◇' },
+  { href: '/rentals', label: 'Véhicules location', icon: '◆' },
   { href: '/transit', label: 'Trajets', icon: '◈' },
-  { href: '/companies', label: 'Compagnies', icon: '◉' },
+  { href: '/companies', label: 'Compagnies & agences', icon: '◉' },
   { href: '/wallets', label: 'Wallet & paiements', icon: '◊' },
   { href: '/disputes', label: 'Litiges', icon: '◍' },
   { href: '/inspections', label: 'Inspections', icon: '◎' },

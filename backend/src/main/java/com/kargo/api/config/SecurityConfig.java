@@ -34,6 +34,9 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Endpoints publics. Les CRUD admin (POST/PATCH/DELETE) sont ouverts pour
+                        // l'instant — l'admin Next.js gère son propre auth simulé. À durcir en V2
+                        // avec un check de rôle JWT côté backend.
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/api/v1/health",
@@ -41,6 +44,10 @@ public class SecurityConfig {
                                 "/api/v1/listings/**",
                                 "/api/v1/trips",
                                 "/api/v1/trips/**",
+                                "/api/v1/companies",
+                                "/api/v1/companies/**",
+                                "/api/v1/rental-listings",
+                                "/api/v1/rental-listings/**",
                                 "/actuator/**",
                                 "/h2/**",
                                 "/error"

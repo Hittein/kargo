@@ -50,6 +50,10 @@ public class User {
     private int trustScore = 50;
 
     @Column(nullable = false)
+    @Builder.Default
+    private String role = "user"; // user | admin | merchant
+
+    @Column(nullable = false)
     private Instant createdAt;
 
     @PrePersist

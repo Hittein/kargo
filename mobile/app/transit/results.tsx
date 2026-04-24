@@ -18,6 +18,7 @@ import {
   type TripSort,
 } from '@/lib/mocks/transit';
 import { countTripFilters, useTransitStore } from '@/lib/stores/transit';
+import { useTrips } from '@/lib/hooks/useTrips';
 
 const SORTS: { key: TripSort; label: string }[] = [
   { key: 'early', label: 'Tôt' },
@@ -36,10 +37,20 @@ export default function TransitResults() {
   const to = toCityId ? getCity(toCityId) : undefined;
   const distanceKm = distanceBetween(fromCityId, toCityId);
 
-  const trips = useMemo(
-    () => searchTrips({ fromCityId, toCityId, date }, filters, sort),
-    [fromCityId, toCityId, date, filters, sort],
-  );
+  // Live trips depuis le backend (fallback vers les mocks via le hook).
+  const { data: liveTrips } = useTrips({ from: fromCityId, to: toCityId, date: date.slice(0, 10) });
+
+  const trips = useMemo(() => {
+    if (!liveTrips || liveTrips.length === 0) {
+      return searchTrips({ fromCityId, toCityId, date }, filters, sort);
+    }
+    // Applique le tri local : le hook ne fait que la requête.
+    const list = [...liveTrips];
+    if (sort === 'price-asc') list.sort((a, b) => a.price - b.price);
+    else if (sort === 'duration-asc') list.sort((a, b) => a.durationMin - b.durationMin);
+    else list.sort((a, b) => new Date(a.departure).getTime() - new Date(b.departure).getTime());
+    return list;
+  }, [liveTrips, fromCityId, toCityId, date, filters, sort]);
 
   const ranksById = useMemo(() => rankTrips(trips), [trips]);
 

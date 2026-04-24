@@ -6,6 +6,7 @@ import { VehiclePhotoCarousel } from '@/components/VehiclePhotoCarousel';
 import { useTheme } from '@/theme/ThemeProvider';
 import { formatKm, formatMRU, formatRelativeDate } from '@/lib/format';
 import { getVehicleById, isFreshlyImported } from '@/lib/mocks/vehicles';
+import { useVehicle } from '@/lib/hooks/useListings';
 
 function formatHands(n: number): string {
   if (n === 0) return '0 main';
@@ -31,7 +32,8 @@ export default function VehicleDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
   const router = useRouter();
-  const vehicle = getVehicleById(id ?? '');
+  const { data: vehicleApi } = useVehicle(id);
+  const vehicle = vehicleApi ?? getVehicleById(id ?? '');
 
   if (!vehicle) {
     return (

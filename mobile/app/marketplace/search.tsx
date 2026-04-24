@@ -9,6 +9,7 @@ import { Badge, Chip, Input, Text } from '@/components/ui';
 import { VehicleCard } from '@/components/VehicleCard';
 import { useTheme, useThemeScheme } from '@/theme/ThemeProvider';
 import { CATEGORY_LABELS, filterVehicles, type SortKey, VEHICLES } from '@/lib/mocks/vehicles';
+import { useVehicles } from '@/lib/hooks/useListings';
 import { countActiveFilters, useMarketplaceStore } from '@/lib/stores/marketplace';
 import { useSavedSearchStore } from '@/lib/stores/saved-searches';
 
@@ -27,9 +28,11 @@ export default function MarketplaceSearch() {
   const { query, filters, sort, setQuery, patchFilters, setSort } = useMarketplaceStore();
   const addSearch = useSavedSearchStore((s) => s.add);
 
+  const { data: vehicles = VEHICLES } = useVehicles();
+
   const results = useMemo(
-    () => filterVehicles(VEHICLES, { ...filters, query }, sort),
-    [filters, query, sort],
+    () => filterVehicles(vehicles, { ...filters, query }, sort),
+    [vehicles, filters, query, sort],
   );
 
   const activeFilterCount = countActiveFilters(filters);

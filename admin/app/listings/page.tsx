@@ -1,54 +1,53 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Badge, Card, PageHeader } from '@/components/Page';
-import { LISTINGS, formatMRU, formatRel } from '@/lib/data';
-import type { AdminListing } from '@/lib/data';
-
-type Filter = 'all' | 'pending_review' | 'active' | 'flagged' | 'sold' | 'rejected';
+import { apiGet, apiDelete, type ApiListing } from '@/lib/api';
 
 export default function ListingsPage() {
-  const [items, setItems] = useState(LISTINGS);
-  const [filter, setFilter] = useState<Filter>('all');
+  const [items, setItems] = useState<ApiListing[]>([]);
   const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
 
-  const filtered = useMemo(() => {
-    let list = items;
-    if (filter !== 'all') list = list.filter((l) => l.status === filter);
-    const q = query.toLowerCase().trim();
-    if (q) list = list.filter((l) => `${l.brand} ${l.model}`.toLowerCase().includes(q) || l.city.toLowerCase().includes(q) || l.sellerName.toLowerCase().includes(q));
-    return list;
-  }, [items, filter, query]);
-
-  const decide = (id: string, status: AdminListing['status']) => {
-    setItems(items.map((l) => (l.id === id ? { ...l, status } : l)));
+  const load = async () => {
+    try {
+      setLoading(true);
+      setItems(await apiGet<ApiListing[]>('/listings'));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'load_failed');
+    } finally {
+      setLoading(false);
+    }
   };
+  useEffect(() => { load(); }, []);
+
+  const remove = async (id: string) => {
+    if (!confirm('Supprimer cette annonce ?')) return;
+    await apiDelete(`/listings/${id}`);
+    load();
+  };
+
+  const filtered = items.filter((l) => {
+    const q = query.toLowerCase().trim();
+    if (!q) return true;
+    return `${l.brand} ${l.model}`.toLowerCase().includes(q) || l.city.toLowerCase().includes(q) || l.sellerName.toLowerCase().includes(q);
+  });
 
   return (
     <>
-      <PageHeader title="Annonces" subtitle="Modération marketplace, signalements et statistiques." />
+      <PageHeader
+        title="Annonces marketplace"
+        subtitle="Voitures à vendre publiées sur l'app mobile."
+        actions={
+          <Link href="/listings/new" className="px-4 py-2 bg-amber text-white rounded-lg text-sm font-semibold">
+            + Nouvelle annonce
+          </Link>
+        }
+      />
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-        {[
-          ['all', 'Tous'],
-          ['pending_review', 'À modérer'],
-          ['flagged', 'Signalés'],
-          ['active', 'Publiés'],
-          ['sold', 'Vendus'],
-        ].map(([k, label]) => {
-          const count = k === 'all' ? items.length : items.filter((l) => l.status === k).length;
-          const active = filter === k;
-          return (
-            <button
-              key={k}
-              onClick={() => setFilter(k as Filter)}
-              className={`p-4 rounded-xl text-left transition-colors ${active ? 'bg-ink text-white' : 'bg-white text-ink border border-slate-100'}`}
-            >
-              <div className="text-2xl font-bold">{count}</div>
-              <div className="text-xs opacity-80">{label}</div>
-            </button>
-          );
-        })}
-      </div>
+      {loading ? <Card><div className="p-6 text-slate-500">Chargement…</div></Card> : null}
+      {err ? <Card><div className="p-6 text-rose-600">Erreur API : {err}</div></Card> : null}
 
       <Card>
         <div className="px-5 py-3 border-b border-slate-100">
@@ -65,10 +64,7 @@ export default function ListingsPage() {
               <th className="px-5 py-3 text-left">Véhicule</th>
               <th className="px-5 py-3 text-left">Vendeur</th>
               <th className="px-5 py-3 text-right">Prix</th>
-              <th className="px-5 py-3 text-center">Vues</th>
-              <th className="px-5 py-3 text-center">Contacts</th>
-              <th className="px-5 py-3 text-center">Signalements</th>
-              <th className="px-5 py-3 text-center">Publié</th>
+              <th className="px-5 py-3 text-center">Photos</th>
               <th className="px-5 py-3 text-center">Statut</th>
               <th className="px-5 py-3 text-right">Actions</th>
             </tr>
@@ -84,44 +80,21 @@ export default function ListingsPage() {
                   <div className="font-medium">{l.sellerName}</div>
                   <div className="text-xs text-slate-500">{l.sellerType === 'pro' ? 'Pro' : 'Particulier'}</div>
                 </td>
-                <td className="px-5 py-3 text-right font-mono">{formatMRU(l.price)} MRU</td>
-                <td className="px-5 py-3 text-center">{l.views}</td>
-                <td className="px-5 py-3 text-center">{l.contacts}</td>
+                <td className="px-5 py-3 text-right font-mono">{l.priceMru.toLocaleString('fr-FR')} MRU</td>
+                <td className="px-5 py-3 text-center">{l.photos}</td>
                 <td className="px-5 py-3 text-center">
-                  {l.flags > 0 ? <Badge tone="danger">{l.flags}</Badge> : <span className="text-slate-400">—</span>}
-                </td>
-                <td className="px-5 py-3 text-center text-xs text-slate-500">{formatRel(l.createdAt)}</td>
-                <td className="px-5 py-3 text-center">
-                  <Badge
-                    tone={
-                      l.status === 'active' ? 'success'
-                        : l.status === 'sold' ? 'info'
-                          : l.status === 'rejected' ? 'danger'
-                            : l.status === 'flagged' ? 'danger'
-                              : 'warn'
-                    }
-                  >
-                    {l.status}
-                  </Badge>
+                  <Badge tone={l.status === 'active' ? 'success' : 'warn'}>{l.status}</Badge>
                 </td>
                 <td className="px-5 py-3 text-right">
-                  <div className="flex justify-end gap-2">
-                    {l.status === 'pending_review' || l.status === 'flagged' ? (
-                      <>
-                        <button onClick={() => decide(l.id, 'active')} className="text-xs text-emerald-600 hover:underline">
-                          Approuver
-                        </button>
-                        <button onClick={() => decide(l.id, 'rejected')} className="text-xs text-rose-600 hover:underline">
-                          Rejeter
-                        </button>
-                      </>
-                    ) : (
-                      <button className="text-xs text-slate-500 hover:underline">Voir</button>
-                    )}
-                  </div>
+                  <button onClick={() => remove(l.id)} className="text-xs text-rose-600 hover:underline">
+                    Supprimer
+                  </button>
                 </td>
               </tr>
             ))}
+            {filtered.length === 0 && !loading ? (
+              <tr><td colSpan={6} className="px-5 py-8 text-center text-slate-500">Aucune annonce.</td></tr>
+            ) : null}
           </tbody>
         </table>
       </Card>
