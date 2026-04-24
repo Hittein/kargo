@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button, Card, Input, Screen, Text } from '@/components/ui';
 import { useAuthStore } from '@/lib/stores/auth';
@@ -14,20 +14,42 @@ export default function ProfileInitScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [city, setCity] = useState<string | undefined>(undefined);
+  const [submitting, setSubmitting] = useState(false);
 
   const isValid = name.trim().length >= 2;
 
   const submit = async () => {
-    if (!isValid) return;
-    completeProfile({ name: name.trim(), email: email.trim() || undefined, city });
+    if (!isValid || submitting) return;
+    setSubmitting(true);
+    const payload = {
+      name: name.trim(),
+      email: email.trim() || undefined,
+      city,
+    };
+    // On écrit local tout de suite (UX réactif) et on tente backend.
+    completeProfile(payload);
     setOnboarded();
-    // Best-effort sync vers le backend (silencieux si offline).
     try {
-      await authApi.updateMe({ name: name.trim(), email: email.trim() || undefined, city });
-    } catch {
-      /* offline ou non authentifié — la version locale reste valide */
+      // Blocking : si ça échoue, l'user voit un message et peut retry.
+      // Sans ça, le profil restait local seulement → à la prochaine re-install,
+      // le backend renverrait name="" et l'utilisateur devait re-saisir.
+      await authApi.updateMe(payload);
+      router.replace('/(tabs)');
+    } catch (e) {
+      setSubmitting(false);
+      Alert.alert(
+        'Synchronisation échouée',
+        "Votre profil n'a pas pu être enregistré sur le serveur (connexion instable ?). Il sera perdu si vous changez de téléphone. Réessayer ?",
+        [
+          {
+            text: 'Continuer quand même',
+            style: 'cancel',
+            onPress: () => router.replace('/(tabs)'),
+          },
+          { text: 'Réessayer', onPress: () => submit() },
+        ],
+      );
     }
-    router.replace('/(tabs)');
   };
 
   return (
@@ -66,7 +88,12 @@ export default function ProfileInitScreen() {
           ))}
         </View>
       </Card>
-      <Button label="Continuer" fullWidth onPress={submit} disabled={!isValid} />
+      <Button
+        label={submitting ? 'Enregistrement…' : 'Continuer'}
+        fullWidth
+        onPress={submit}
+        disabled={!isValid || submitting}
+      />
     </Screen>
   );
 }

@@ -10,9 +10,11 @@ import { ThemeProvider } from '@/theme/ThemeProvider';
 import { I18nGate } from '@/i18n/I18nProvider';
 import '@/i18n';
 import { useKargoFonts } from '@/hooks/use-fonts';
-import { useAuthStore } from '@/lib/stores/auth';
+import { useAuthStore, type AuthUser } from '@/lib/stores/auth';
 import { isBiometryOptedIn } from '@/lib/biometry';
 import { CallOverlay } from '@/components/CallOverlay';
+import { authApi } from '@/lib/api';
+import type { ApiUser } from '@/lib/api/types';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -30,13 +32,75 @@ export const unstable_settings = {
   anchor: '(tabs)',
 };
 
+function fromApiUser(u: ApiUser): AuthUser {
+  return {
+    id: u.id,
+    phone: u.phone,
+    name: u.name,
+    email: u.email,
+    city: u.city,
+    avatarUrl: u.avatarUrl,
+    createdAt: u.createdAt,
+    emailVerified: u.emailVerified,
+    phoneVerified: u.phoneVerified,
+    kycLevel: u.kycLevel,
+    hasPin: u.hasPin,
+    hasBiometric: u.hasBiometric,
+  };
+}
+
 function AuthGate() {
   const router = useRouter();
   const segments = useSegments();
   const user = useAuthStore((s) => s.user);
   const hasOnboarded = useAuthStore((s) => s.hasOnboarded);
   const lockedRef = useRef<boolean>(false);
+  const syncedRef = useRef<boolean>(false);
   const [coldStart, setColdStart] = useState<boolean>(true);
+
+  // Cold-start reconciliation: si on a un token mais backend / local divergent,
+  // on aligne dans un sens ou l'autre. Corrige notamment le cas où completeProfile
+  // a écrit local mais le précédent updateMe n'avait pas atteint le backend.
+  useEffect(() => {
+    if (syncedRef.current) return;
+    const state = useAuthStore.getState();
+    if (!state.user || !state.token) return;
+    syncedRef.current = true;
+    const localName = state.user.name;
+    (async () => {
+      try {
+        const me = await authApi.getMe();
+        if (me.name && me.name !== localName) {
+          // Backend connaît un nom différent (ou à jour) → source of truth serveur.
+          useAuthStore.getState().updateProfile({
+            name: me.name,
+            email: me.email,
+            city: me.city,
+            avatarUrl: me.avatarUrl,
+          });
+        } else if (!me.name && localName) {
+          // Local a un nom, serveur non. Push pour que le prochain login propre.
+          const localEmail = state.user?.email;
+          const localCity = state.user?.city;
+          try {
+            const updated = await authApi.updateMe({
+              name: localName,
+              email: localEmail,
+              city: localCity,
+            });
+            const currentToken = useAuthStore.getState().token;
+            if (currentToken) {
+              useAuthStore.getState().setSession(fromApiUser(updated), currentToken);
+            }
+          } catch {
+            /* on réessaiera au prochain cold-start */
+          }
+        }
+      } catch {
+        /* offline : pas de sync, pas de régression */
+      }
+    })();
+  }, [user?.id]);
 
   useEffect(() => {
     const inAuth = segments[0] === '(auth)';
