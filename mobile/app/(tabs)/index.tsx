@@ -23,36 +23,36 @@ const ACTION_CARDS = [
     title: 'Achat',
     subtitle: 'Voitures à vendre',
     countLabel: '210+ annonces',
-    photo: 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=600&q=70',
-    icon: 'bag-handle' as const,
+    photo: require('@/assets/images/home/home-buy.png'),
     bg: '#FFECE0',
     iconBg: '#FFFFFF',
     accent: '#F97316',
     href: '/marketplace/browse',
+    badgeIcon: 'bag-handle' as const,
   },
   {
     key: 'rent' as const,
     title: 'Location',
     subtitle: 'Voitures à louer',
     countLabel: '120+ véhicules',
-    photo: 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&q=70',
-    icon: 'key' as const,
+    photo: require('@/assets/images/home/home-rent.png'),
     bg: '#E4ECFD',
     iconBg: '#FFFFFF',
     accent: '#2563EB',
     href: '/rental/search',
+    badgeIcon: 'key' as const,
   },
   {
     key: 'trip' as const,
     title: 'Billet Bus',
     subtitle: 'Transports urbains',
     countLabel: '45+ trajets',
-    photo: BUS_IMAGE,
-    icon: 'bus' as const,
+    photo: require('@/assets/images/home/home-transit.png'),
     bg: '#DCF6E7',
     iconBg: '#FFFFFF',
     accent: '#10B981',
     href: '/transit',
+    badgeIcon: 'bus' as const,
   },
 ];
 
@@ -289,14 +289,23 @@ export default function HomeScreen() {
                     justifyContent: 'center',
                   }}
                 >
-                  <Ionicons name={a.icon} size={18} color={a.accent} />
+                  <Ionicons name={a.badgeIcon} size={18} color={a.accent} />
                 </View>
-                <View style={{ alignItems: 'center', height: 70 }}>
+                <View
+                  style={{
+                    height: 88,
+                    borderRadius: 14,
+                    backgroundColor: '#FFFFFF',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 8,
+                  }}
+                >
                   <Image
-                    source={{ uri: a.photo }}
+                    source={a.photo}
                     style={{ width: '100%', height: '100%' }}
                     contentFit="contain"
-                    transition={150}
+                    transition={200}
                   />
                 </View>
                 <View style={{ gap: 2 }}>
@@ -309,24 +318,21 @@ export default function HomeScreen() {
                 </View>
                 <View
                   style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
                     paddingVertical: 8,
-                    paddingHorizontal: 12,
+                    paddingHorizontal: 10,
                     borderRadius: 999,
                     backgroundColor: '#FFFFFF',
+                    alignItems: 'center',
                   }}
                 >
                   <Text
                     variant="caption"
                     weight="bold"
-                    style={{ color: a.accent }}
+                    style={{ color: a.accent, fontSize: 11 }}
                     numberOfLines={1}
                   >
                     {a.countLabel}
                   </Text>
-                  <Ionicons name="chevron-forward" size={12} color={a.accent} />
                 </View>
               </Pressable>
             ))}
