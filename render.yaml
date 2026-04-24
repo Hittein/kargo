@@ -39,6 +39,8 @@ services:
 
 databases:
   - name: kargo-db
-    plan: free
+    # Render n'autorise qu'1 DB plan free par workspace (déjà pris par
+    # wallety-db). basic-256mb = ~$6/mois, suffisant pour le démarrage.
+    plan: basic-256mb
     databaseName: kargo
     user: kargo
