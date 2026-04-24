@@ -5,15 +5,18 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { Card, CircleIcon, GradientHero, Text } from '@/components/ui';
+import { Badge, Card, CircleIcon, GradientHero, Text } from '@/components/ui';
 import { VehicleCard } from '@/components/VehicleCard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { filterVehicles, VEHICLES } from '@/lib/mocks/vehicles';
+import { useAuthStore } from '@/lib/stores/auth';
 
 export default function HomeScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { t } = useTranslation();
+  const user = useAuthStore((s) => s.user);
+  const firstName = (user?.name || 'Bienvenue').split(' ')[0];
 
   const actions: Array<{
     key: 'buy' | 'rent' | 'trip';
@@ -51,23 +54,32 @@ export default function HomeScreen() {
 
   const publishActions: Array<{
     key: 'sell' | 'rentOut';
-    photo: string;
+    icon: keyof typeof Ionicons.glyphMap;
     title: string;
     subtitle: string;
+    badge: string;
+    bg: string;
+    accent: string;
     href: string;
   }> = [
     {
       key: 'sell',
-      photo: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&q=70',
+      icon: 'cash',
       title: 'Vendre ma voiture',
-      subtitle: 'Prix estimé par IA',
+      subtitle: 'Estimation IA + visibilité 30j',
+      badge: 'GRATUIT',
+      bg: '#FFF7E6',
+      accent: '#F59E0B',
       href: '/marketplace/sell/vin',
     },
     {
       key: 'rentOut',
-      photo: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&q=70',
+      icon: 'key',
       title: 'Mettre en location',
-      subtitle: 'Gains journaliers',
+      subtitle: 'Gagnez jusqu\'à 80 000 MRU/mois',
+      badge: 'PRO',
+      bg: '#E0F2FE',
+      accent: '#0284C7',
       href: '/rental/list-vehicle',
     },
   ];
@@ -100,7 +112,7 @@ export default function HomeScreen() {
                     weight="bold"
                     style={{ color: theme.color.textInverse, marginTop: 2 }}
                   >
-                    {t('home.greeting', { name: 'Aminetou' })}
+                    {t('home.greeting', { name: firstName })}
                   </Text>
                 </View>
                 <Pressable
@@ -192,38 +204,93 @@ export default function HomeScreen() {
         </View>
 
         <View style={{ paddingHorizontal: 20, gap: 12 }}>
-          <View
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-          >
-            <Text variant="heading2" weight="bold">
-              Publier une annonce
-            </Text>
-            <Ionicons name="add-circle" size={22} color={theme.color.primary} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: theme.color.primary,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name="megaphone" size={16} color={theme.color.textInverse} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text variant="heading2" weight="bold">
+                Vous voulez vendre ou louer ?
+              </Text>
+              <Text variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+                Publiez votre annonce en quelques minutes.
+              </Text>
+            </View>
           </View>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
+
+          <View style={{ gap: 10 }}>
             {publishActions.map((a) => (
-              <Card
+              <Pressable
                 key={a.key}
-                radius="xl"
-                padding={0}
-                style={{ flex: 1, overflow: 'hidden' }}
                 onPress={() => router.push(a.href as never)}
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 14,
+                  padding: 16,
+                  borderRadius: theme.radius.xl,
+                  backgroundColor: a.bg,
+                  borderWidth: 1,
+                  borderColor: a.accent + '33',
+                  opacity: pressed ? 0.92 : 1,
+                })}
               >
-                <Image
-                  source={{ uri: a.photo }}
-                  style={{ width: '100%', height: 96 }}
-                  contentFit="cover"
-                  transition={150}
-                />
-                <View style={{ padding: 12, gap: 4 }}>
-                  <Text variant="bodyL" weight="bold" numberOfLines={1}>
-                    {a.title}
-                  </Text>
-                  <Text variant="caption" tone="secondary" numberOfLines={1}>
+                <View
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 24,
+                    backgroundColor: a.accent,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name={a.icon} size={22} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text variant="bodyL" weight="bold">
+                      {a.title}
+                    </Text>
+                    <View
+                      style={{
+                        paddingHorizontal: 8,
+                        paddingVertical: 2,
+                        borderRadius: 999,
+                        backgroundColor: a.accent,
+                      }}
+                    >
+                      <Text variant="caption" weight="bold" style={{ color: '#fff', fontSize: 10, letterSpacing: 0.4 }}>
+                        {a.badge}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text variant="caption" tone="secondary" style={{ marginTop: 3 }}>
                     {a.subtitle}
                   </Text>
                 </View>
-              </Card>
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: '#FFFFFFCC',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="arrow-forward" size={16} color={a.accent} />
+                </View>
+              </Pressable>
             ))}
           </View>
         </View>

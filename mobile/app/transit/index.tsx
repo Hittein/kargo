@@ -5,27 +5,30 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card, CircleIcon, GradientHero, Text } from '@/components/ui';
+import { Badge, Button, Card, CircleIcon, GradientHero, Text } from '@/components/ui';
 import { CityPickerModal } from '@/components/CityPickerModal';
+import { MiniDatePicker } from '@/components/MiniDatePicker';
 import { useTheme } from '@/theme/ThemeProvider';
-import { addDaysIso, formatDateShort, sameDay } from '@/lib/time';
 import { getCity, type City } from '@/lib/mocks/transit';
-import { useTransitStore } from '@/lib/stores/transit';
+import { useTransitStore, type TripMode, type TripLeg } from '@/lib/stores/transit';
+
+const MODES: { key: TripMode; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'one-way', label: 'Aller simple', icon: 'arrow-forward' },
+  { key: 'round-trip', label: 'Aller-retour', icon: 'swap-horizontal' },
+  { key: 'multi', label: 'Multi-destinations', icon: 'git-branch' },
+];
 
 export default function TransitHome() {
   const theme = useTheme();
   const router = useRouter();
   const store = useTransitStore();
-  const [picker, setPicker] = useState<null | 'from' | 'to'>(null);
 
-  const fromCity = store.fromCityId ? getCity(store.fromCityId) : undefined;
-  const toCity = store.toCityId ? getCity(store.toCityId) : undefined;
+  const [picker, setPicker] = useState<null | { kind: 'from' | 'to'; legIndex: number }>(null);
+  const [datePicker, setDatePicker] = useState<null | { kind: 'leg' | 'return'; legIndex?: number }>(null);
 
-  const today = '2026-04-24T00:00:00.000Z';
-  const tomorrow = addDaysIso(today, 1);
-  const afterTomorrow = addDaysIso(today, 2);
-
-  const canSearch = !!fromCity && !!toCity;
+  const canSearch =
+    store.legs.every((l) => l.fromCityId && l.toCityId) &&
+    (store.mode !== 'round-trip' || !!store.returnDate);
 
   const onSubmit = () => {
     if (!canSearch) return;
@@ -34,81 +37,45 @@ export default function TransitHome() {
   };
 
   const handlePickSelect = (city: City) => {
-    if (picker === 'from') store.setFrom(city.id);
-    if (picker === 'to') store.setTo(city.id);
+    if (!picker) return;
+    if (picker.kind === 'from') store.setLegFrom(picker.legIndex, city.id);
+    else store.setLegTo(picker.legIndex, city.id);
+    setPicker(null);
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.color.bg }}>
       <StatusBar style="light" />
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-      >
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         <GradientHero preset="brand" radius="blob">
           <Image
-            source={{
-              uri: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=1200&q=70',
-            }}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              opacity: 0.18,
-            }}
+            source={{ uri: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=1200&q=70' }}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.18 }}
             contentFit="cover"
           />
           <BusSilhouettes />
           <SafeAreaView edges={['top']}>
-            <View style={{ padding: 24, paddingBottom: 72, gap: 24 }}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <View
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 22,
-                    backgroundColor: 'rgba(255,255,255,0.18)',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
+            <View style={{ padding: 24, paddingBottom: 60, gap: 18 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Pressable
+                  onPress={() => router.back()}
+                  hitSlop={8}
+                  style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' }}
                 >
-                  <Pressable onPress={() => router.back()} hitSlop={10}>
-                    <Ionicons name="chevron-back" size={20} color={theme.color.textInverse} />
-                  </Pressable>
-                </View>
+                  <Ionicons name="chevron-back" size={20} color={theme.color.textInverse} />
+                </Pressable>
                 <Pressable
                   onPress={() => router.push('/(tabs)/tickets')}
                   hitSlop={8}
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 22,
-                    backgroundColor: 'rgba(255,255,255,0.18)',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
+                  style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' }}
                 >
                   <Ionicons name="ticket" size={18} color={theme.color.textInverse} />
                 </Pressable>
               </View>
 
               <View>
-                <Text variant="caption" style={{ color: '#FFFFFFAA' }}>
-                  Transport
-                </Text>
-                <Text
-                  variant="displayL"
-                  weight="bold"
-                  style={{ color: theme.color.textInverse, marginTop: 4 }}
-                >
+                <Text variant="caption" style={{ color: '#FFFFFFAA' }}>Transport</Text>
+                <Text variant="displayL" weight="bold" style={{ color: theme.color.textInverse, marginTop: 4 }}>
                   Où allez-vous{'\n'}aujourd'hui ?
                 </Text>
               </View>
@@ -116,119 +83,125 @@ export default function TransitHome() {
           </SafeAreaView>
         </GradientHero>
 
-        <View style={{ paddingHorizontal: 20, marginTop: -56, gap: 16 }}>
-          <Card variant="elevated" radius="xl" padding={20}>
-            <View style={{ gap: 4 }}>
-              <FieldRow
-                icon="radio-button-on"
-                iconColor={theme.color.primary}
-                label="Départ"
-                value={fromCity?.name ?? 'Sélectionner une ville'}
-                onPress={() => setPicker('from')}
-                placeholder={!fromCity}
-              />
-              <View
-                style={{
-                  height: 1,
-                  backgroundColor: theme.color.divider,
-                  marginLeft: 40,
-                  marginVertical: 4,
-                }}
-              />
-              <View style={{ position: 'relative' }}>
-                <FieldRow
-                  icon="location"
-                  iconColor={theme.color.brand}
-                  label="Destination"
-                  value={toCity?.name ?? 'Sélectionner une ville'}
-                  onPress={() => setPicker('to')}
-                  placeholder={!toCity}
-                />
+        <View style={{ paddingHorizontal: 20, marginTop: -44, gap: 14 }}>
+          {/* Mode selector */}
+          <View
+            style={{
+              flexDirection: 'row',
+              backgroundColor: theme.color.card,
+              borderRadius: theme.radius.pill,
+              padding: 4,
+              ...theme.shadow.sm,
+            }}
+          >
+            {MODES.map((m) => {
+              const active = store.mode === m.key;
+              return (
                 <Pressable
-                  onPress={() => store.swap()}
-                  hitSlop={10}
+                  key={m.key}
+                  onPress={() => store.setMode(m.key)}
                   style={{
-                    position: 'absolute',
-                    right: -2,
-                    top: -32,
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: theme.color.card,
-                    borderWidth: 1,
-                    borderColor: theme.color.border,
+                    flex: 1,
+                    flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    ...theme.shadow.sm,
+                    gap: 6,
+                    paddingVertical: 10,
+                    borderRadius: theme.radius.pill,
+                    backgroundColor: active ? theme.color.primary : 'transparent',
                   }}
                 >
-                  <Ionicons name="swap-vertical" size={18} color={theme.color.text} />
-                </Pressable>
-              </View>
-            </View>
-          </Card>
-
-          <Card variant="default" radius="xl" padding={18}>
-            <Text variant="caption" tone="secondary" weight="semiBold" style={{ marginBottom: 10 }}>
-              DATE
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8 }}
-            >
-              {[
-                { label: "Aujourd'hui", iso: today },
-                { label: 'Demain', iso: tomorrow },
-                { label: formatDateShort(afterTomorrow), iso: afterTomorrow },
-                { label: formatDateShort(addDaysIso(today, 3)), iso: addDaysIso(today, 3) },
-                { label: formatDateShort(addDaysIso(today, 4)), iso: addDaysIso(today, 4) },
-              ].map((d) => {
-                const active = sameDay(store.date, d.iso);
-                return (
-                  <Pressable
-                    key={d.iso}
-                    onPress={() => store.setDate(d.iso)}
-                    style={{
-                      paddingHorizontal: 18,
-                      paddingVertical: 12,
-                      borderRadius: theme.radius.pill,
-                      backgroundColor: active ? theme.color.chipActive : theme.color.chipBg,
-                      borderWidth: active ? 0 : 1,
-                      borderColor: theme.color.border,
-                    }}
+                  <Ionicons
+                    name={m.icon}
+                    size={14}
+                    color={active ? theme.color.textInverse : theme.color.textSecondary}
+                  />
+                  <Text
+                    variant="caption"
+                    weight="semiBold"
+                    style={{ color: active ? theme.color.textInverse : theme.color.text }}
                   >
-                    <Text
-                      variant="bodyM"
-                      weight="semiBold"
-                      style={{ color: active ? theme.color.textInverse : theme.color.text }}
-                    >
-                      {d.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+                    {m.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
 
-            <View
+          {/* Legs */}
+          {store.legs.map((leg, i) => (
+            <LegCard
+              key={i}
+              leg={leg}
+              index={i}
+              showRemove={store.mode === 'multi' && i > 0}
+              onPickFrom={() => setPicker({ kind: 'from', legIndex: i })}
+              onPickTo={() => setPicker({ kind: 'to', legIndex: i })}
+              onPickDate={() => setDatePicker({ kind: 'leg', legIndex: i })}
+              onSwap={i === 0 ? () => store.swap() : undefined}
+              onRemove={() => store.removeLeg(i)}
+              labelPrefix={store.mode === 'multi' ? `Étape ${i + 1}` : undefined}
+            />
+          ))}
+
+          {/* Add leg button (multi) */}
+          {store.mode === 'multi' && store.legs.length < 5 ? (
+            <Pressable
+              onPress={() => store.addLeg()}
               style={{
-                flexDirection: 'row',
+                paddingVertical: 14,
+                borderRadius: theme.radius.lg,
+                borderWidth: 2,
+                borderStyle: 'dashed',
+                borderColor: theme.color.border,
                 alignItems: 'center',
-                gap: 14,
-                marginTop: 18,
-                paddingTop: 14,
-                borderTopWidth: 1,
-                borderTopColor: theme.color.divider,
+                flexDirection: 'row',
+                justifyContent: 'center',
+                gap: 8,
               }}
             >
+              <Ionicons name="add-circle" size={20} color={theme.color.primary} />
+              <Text variant="bodyM" weight="semiBold" style={{ color: theme.color.primary }}>
+                Ajouter une étape
+              </Text>
+            </Pressable>
+          ) : null}
+
+          {/* Return date (round-trip) */}
+          {store.mode === 'round-trip' ? (
+            <Card variant="default" radius="xl" padding={16}>
+              <Pressable
+                onPress={() => setDatePicker({ kind: 'return' })}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}
+              >
+                <CircleIcon name="return-up-back" size={36} tone="brand" />
+                <View style={{ flex: 1 }}>
+                  <Text variant="caption" tone="secondary" weight="semiBold" style={{ textTransform: 'uppercase' }}>
+                    Date de retour
+                  </Text>
+                  <Text variant="bodyL" weight="semiBold" style={{ marginTop: 2 }}>
+                    {store.returnDate
+                      ? new Date(store.returnDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+                      : 'Choisir la date'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={theme.color.textSecondary} />
+              </Pressable>
+            </Card>
+          ) : null}
+
+          {/* Passengers */}
+          <Card variant="default" radius="xl" padding={16}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               <CircleIcon name="people" size={36} tone="brand" />
               <Text variant="bodyM" weight="semiBold" style={{ flex: 1 }}>
                 Passagers
               </Text>
               <Pressable
                 onPress={() => store.setPassengers(store.passengers - 1)}
+                disabled={store.passengers <= 1}
                 hitSlop={8}
-                style={stepperBtn(theme)}
+                style={stepperBtn(theme, store.passengers <= 1)}
               >
                 <Ionicons name="remove" size={16} color={theme.color.text} />
               </Pressable>
@@ -237,8 +210,9 @@ export default function TransitHome() {
               </Text>
               <Pressable
                 onPress={() => store.setPassengers(store.passengers + 1)}
+                disabled={store.passengers >= 9}
                 hitSlop={8}
-                style={stepperBtn(theme)}
+                style={stepperBtn(theme, store.passengers >= 9)}
               >
                 <Ionicons name="add" size={16} color={theme.color.text} />
               </Pressable>
@@ -266,8 +240,8 @@ export default function TransitHome() {
                   <Card
                     key={idx}
                     onPress={() => {
-                      store.setFrom(r.fromCityId);
-                      store.setTo(r.toCityId);
+                      store.setLegFrom(0, r.fromCityId);
+                      store.setLegTo(0, r.toCityId);
                     }}
                     radius="lg"
                     padding={14}
@@ -293,20 +267,151 @@ export default function TransitHome() {
       </ScrollView>
 
       <CityPickerModal
-        visible={picker === 'from'}
+        visible={picker?.kind === 'from'}
         title="Ville de départ"
-        excludeId={store.toCityId}
+        excludeId={picker ? store.legs[picker.legIndex]?.toCityId : undefined}
         onClose={() => setPicker(null)}
         onSelect={handlePickSelect}
       />
       <CityPickerModal
-        visible={picker === 'to'}
+        visible={picker?.kind === 'to'}
         title="Ville de destination"
-        excludeId={store.fromCityId}
+        excludeId={picker ? store.legs[picker.legIndex]?.fromCityId : undefined}
         onClose={() => setPicker(null)}
         onSelect={handlePickSelect}
       />
+
+      <MiniDatePicker
+        visible={!!datePicker}
+        onClose={() => setDatePicker(null)}
+        valueIso={
+          datePicker?.kind === 'return'
+            ? store.returnDate ?? undefined
+            : datePicker
+              ? store.legs[datePicker.legIndex ?? 0]?.date
+              : undefined
+        }
+        minDateIso={
+          datePicker?.kind === 'return'
+            ? store.legs[0]?.date
+            : datePicker?.legIndex && datePicker.legIndex > 0
+              ? store.legs[datePicker.legIndex - 1]?.date
+              : undefined
+        }
+        onSelect={(iso) => {
+          if (!datePicker) return;
+          if (datePicker.kind === 'return') store.setReturnDate(iso);
+          else store.setLegDate(datePicker.legIndex ?? 0, iso);
+        }}
+        title={
+          datePicker?.kind === 'return'
+            ? 'Date de retour'
+            : store.mode === 'multi'
+              ? `Date — étape ${(datePicker?.legIndex ?? 0) + 1}`
+              : "Date d'aller"
+        }
+      />
     </View>
+  );
+}
+
+function LegCard({
+  leg,
+  index,
+  showRemove,
+  onPickFrom,
+  onPickTo,
+  onPickDate,
+  onSwap,
+  onRemove,
+  labelPrefix,
+}: {
+  leg: TripLeg;
+  index: number;
+  showRemove: boolean;
+  onPickFrom: () => void;
+  onPickTo: () => void;
+  onPickDate: () => void;
+  onSwap?: () => void;
+  onRemove: () => void;
+  labelPrefix?: string;
+}) {
+  const theme = useTheme();
+  const fromCity = leg.fromCityId ? getCity(leg.fromCityId) : undefined;
+  const toCity = leg.toCityId ? getCity(leg.toCityId) : undefined;
+
+  return (
+    <Card variant="elevated" radius="xl" padding={16}>
+      {labelPrefix ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <Badge label={labelPrefix} tone="primary" />
+          {showRemove ? (
+            <Pressable onPress={onRemove} hitSlop={8}>
+              <Ionicons name="close-circle" size={20} color={theme.color.danger} />
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+
+      <FieldRow
+        icon="radio-button-on"
+        iconColor={theme.color.primary}
+        label="Départ"
+        value={fromCity?.name ?? 'Sélectionner une ville'}
+        onPress={onPickFrom}
+        placeholder={!fromCity}
+      />
+      <View style={{ height: 1, backgroundColor: theme.color.divider, marginLeft: 40, marginVertical: 4 }} />
+      <View style={{ position: 'relative' }}>
+        <FieldRow
+          icon="location"
+          iconColor={theme.color.brand}
+          label="Destination"
+          value={toCity?.name ?? 'Sélectionner une ville'}
+          onPress={onPickTo}
+          placeholder={!toCity}
+        />
+        {onSwap ? (
+          <Pressable
+            onPress={onSwap}
+            hitSlop={10}
+            style={{
+              position: 'absolute',
+              right: -2,
+              top: -32,
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: theme.color.card,
+              borderWidth: 1,
+              borderColor: theme.color.border,
+              alignItems: 'center',
+              justifyContent: 'center',
+              ...theme.shadow.sm,
+            }}
+          >
+            <Ionicons name="swap-vertical" size={18} color={theme.color.text} />
+          </Pressable>
+        ) : null}
+      </View>
+
+      {/* Date inline */}
+      <View style={{ height: 1, backgroundColor: theme.color.divider, marginLeft: 40, marginVertical: 4 }} />
+      <Pressable onPress={onPickDate} style={{ paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+        <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: theme.color.accent + '22', alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="calendar" size={14} color={theme.color.accent} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text variant="caption" tone="secondary" weight="semiBold" style={{ textTransform: 'uppercase' }}>
+            Date
+          </Text>
+          <Text variant="bodyL" weight="semiBold" style={{ marginTop: 2 }}>
+            {new Date(leg.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={theme.color.textSecondary} />
+      </Pressable>
+    </Card>
   );
 }
 
@@ -337,16 +442,7 @@ function FieldRow({
         opacity: pressed ? 0.7 : 1,
       })}
     >
-      <View
-        style={{
-          width: 32,
-          height: 32,
-          borderRadius: 16,
-          backgroundColor: iconColor + '22',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+      <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: iconColor + '22', alignItems: 'center', justifyContent: 'center' }}>
         <Ionicons name={icon} size={14} color={iconColor} />
       </View>
       <View style={{ flex: 1 }}>
@@ -366,7 +462,7 @@ function FieldRow({
   );
 }
 
-function stepperBtn(theme: ReturnType<typeof useTheme>) {
+function stepperBtn(theme: ReturnType<typeof useTheme>, disabled: boolean) {
   return {
     width: 36,
     height: 36,
@@ -374,32 +470,14 @@ function stepperBtn(theme: ReturnType<typeof useTheme>) {
     backgroundColor: theme.color.bgElevated,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
+    opacity: disabled ? 0.4 : 1,
   };
 }
 
 function BusSilhouettes() {
   return (
-    <View
-      pointerEvents="none"
-      style={{
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        bottom: 12,
-        height: 80,
-        opacity: 0.55,
-      }}
-    >
-      <View
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 28,
-          height: 1.5,
-          backgroundColor: 'rgba(255,255,255,0.35)',
-        }}
-      />
+    <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 12, height: 80, opacity: 0.55 }}>
+      <View style={{ position: 'absolute', left: 0, right: 0, bottom: 28, height: 1.5, backgroundColor: 'rgba(255,255,255,0.35)' }} />
       <View style={{ position: 'absolute', left: 16, bottom: 22 }}>
         <Ionicons name="bus" size={48} color="rgba(255,255,255,0.95)" />
       </View>

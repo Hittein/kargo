@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Switch, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -7,6 +7,7 @@ import { BackHeader } from '@/components/BackHeader';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuthStore } from '@/lib/stores/auth';
 import { useWalletExtraStore } from '@/lib/stores/wallet-extra';
+import { authenticate, isBiometryAvailable, isBiometryOptedIn, setBiometryOptedIn } from '@/lib/biometry';
 
 export default function Security() {
   const theme = useTheme();
@@ -20,6 +21,31 @@ export default function Security() {
 
   const [pin, setPinInput] = useState('');
   const [pin2, setPinInput2] = useState('');
+  const [biometryAvailable, setBiometryAvailable] = useState(false);
+  const [biometryOptIn, setBiometryOptIn] = useState(isBiometryOptedIn());
+
+  useEffect(() => {
+    isBiometryAvailable().then(setBiometryAvailable);
+  }, []);
+
+  const toggleBiometry = async (enabled: boolean) => {
+    if (!enabled) {
+      setBiometryOptedIn(false);
+      setBiometryOptIn(false);
+      setBiometric(false);
+      return;
+    }
+    if (!biometryAvailable) {
+      Alert.alert('Biométrie indisponible', "Aucun capteur Face ID / empreinte n'est configuré sur cet appareil.");
+      return;
+    }
+    const ok = await authenticate('Activer le déverrouillage par Face ID');
+    if (!ok) return;
+    setBiometryOptedIn(true);
+    setBiometryOptIn(true);
+    setBiometric(true);
+    Alert.alert('Face ID activé', 'Vous pourrez déverrouiller Kargo avec votre visage à la prochaine ouverture.');
+  };
 
   const enablePin = () => {
     if (pin.length !== 4) {
@@ -88,15 +114,17 @@ export default function Security() {
       <Card>
         <Row
           icon="finger-print"
-          label="Biométrie (Face ID / empreinte)"
-          desc="Déverrouillage rapide & validation paiements."
+          label="Face ID / empreinte"
+          desc={
+            biometryAvailable
+              ? 'Déverrouillage rapide à l\'ouverture.'
+              : 'Indisponible sur cet appareil.'
+          }
           right={
             <Switch
-              value={user?.hasBiometric ?? false}
-              onValueChange={(v) => {
-                setBiometric(v);
-                if (v) Alert.alert('Biométrie activée (simulation)');
-              }}
+              value={biometryOptIn}
+              onValueChange={toggleBiometry}
+              disabled={!biometryAvailable}
             />
           }
         />
